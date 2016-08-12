@@ -48,8 +48,8 @@ int __attribute__ ((noinline)) main(void)
     t = sys_tick_irq_cnt;
     while( sys_tick_irq_cnt == t )
       ;
-
-    Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
+    
+    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);    
     t = sys_tick_irq_cnt;
     while( sys_tick_irq_cnt == t )
       ;
