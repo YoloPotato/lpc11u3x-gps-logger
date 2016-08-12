@@ -6,8 +6,8 @@
   lpcopen_v2_03_lpcxpresso_nxp_lpcxpresso_11u37h.zip
 */
 #include <chip.h>
+#include "delay.h"
 
-#define SYS_CORE_CLOCK 12000000UL
 #define SYS_TICK_PERIOD_IN_MS 100
 
 
@@ -29,14 +29,22 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
 int __attribute__ ((noinline)) main(void)
 {
 
+  /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
+  /* it will also enable IOCON, see sysinit_11xx.c */
+  Chip_SystemInit(); 
+
+  /* if the clock or PLL has been changed, also update the global variable SystemCoreClock */
+  /* see chip_11xx.c */
+  SystemCoreClockUpdate();
   
   /* set systick and start systick interrupt */
-  SysTick_Config(SYS_CORE_CLOCK/1000UL*(unsigned long)SYS_TICK_PERIOD_IN_MS);
+  SysTick_Config(SystemCoreClock/1000UL*(unsigned long)SYS_TICK_PERIOD_IN_MS);
+  
   
   /* turn on GPIO */
   Chip_GPIO_Init(LPC_GPIO);
   
-  /* turn on IOCON */
+  /* turn on IOCON... this is also done in Chip_SystemInit() */
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
   
   Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
@@ -45,14 +53,10 @@ int __attribute__ ((noinline)) main(void)
   {
     uint32_t t;
     Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
-    t = sys_tick_irq_cnt;
-    while( sys_tick_irq_cnt == t )
-      ;
+    delay_micro_seconds(500UL*1000UL);
     
-    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);    
-    t = sys_tick_irq_cnt;
-    while( sys_tick_irq_cnt == t )
-      ;
+    Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
+    delay_micro_seconds(500UL*1000UL);
   }
   
   
