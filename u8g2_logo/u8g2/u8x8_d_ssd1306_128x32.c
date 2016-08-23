@@ -40,6 +40,7 @@
 
 /* UG-2832HSWEG02 Datasheet, Section 4.4 */
 static const uint8_t u8x8_d_ssd1306_128x32_univision_init_seq[] = {
+  U8X8_DLY(10),
     
   U8X8_START_TRANSFER(),             	/* enable chip, delay is part of the transfer start */
   
