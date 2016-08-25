@@ -18,6 +18,11 @@
 uint8_t u8x8_gpio_and_delay_lpc11u3x(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
 
 /*=======================================================================*/
+/* little_rook_chess.c */
+void chess_Init(u8g2_t *u8g, uint8_t body_color);
+
+
+/*=======================================================================*/
 u8g2_t u8g2;
 
 /*=======================================================================*/
@@ -93,6 +98,7 @@ int __attribute__ ((noinline)) main(void)
   u8g2_Setup_ssd1306_i2c_128x64_noname_2(&u8g2, U8G2_R0, u8x8_byte_sw_i2c, u8x8_gpio_and_delay_lpc11u3x);
   u8g2_InitDisplay(&u8g2);
   u8g2_SetPowerSave(&u8g2, 0);
+  chess_Init(&u8g2, 1);  /* assuming OLED here, so make the body_color be 1 for the white OLED pixel */
 
 
   for(;;)
