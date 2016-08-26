@@ -71,11 +71,12 @@ int __attribute__ ((noinline)) main(void)
 
   //delay_micro_seconds(10UL*1000UL);
   
-  u8g2_Setup_ssd1306_i2c_128x64_noname_2(&u8g2, U8G2_R0, u8x8_byte_sw_i2c, u8x8_gpio_and_delay_lpc11u3x);
+  u8g2_Setup_ssd1306_i2c_128x64_noname_1(&u8g2, U8G2_R0, u8x8_byte_sw_i2c, u8x8_gpio_and_delay_lpc11u3x);
   u8g2_InitDisplay(&u8g2);
   u8g2_SetPowerSave(&u8g2, 0);
   chess_Init(&u8g2, 1);  /* assuming OLED here, so make the body_color be 1 for the white OLED pixel */
-  chess_exec();
+  for(;;)
+    chess_exec();
 
 
   

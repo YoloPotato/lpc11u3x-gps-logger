@@ -37,7 +37,7 @@
 
 #include "u8x8.h"
 
-static uint8_t u8x8_read_pin_state(u8x8_t *u8x8)
+uint8_t u8x8_read_pin_state(u8x8_t *u8x8)
 {
   uint8_t i;
   uint8_t pin_state;

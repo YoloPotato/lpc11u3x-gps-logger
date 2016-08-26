@@ -96,10 +96,13 @@
 
     17. June 2016
 	U8g2/Arduboy Port
+	
+    26. Aug 2016
+      LPC11U3x Port
 */
 
-#include <u8g2.h>
-
+#include "u8g2.h"
+#include "chip.h"
 
 
 
@@ -1859,8 +1862,16 @@ void mnu_Draw(void)
   y -= MNU_ENTRY_HEIGHT;
   
 
-  u8g2_DrawBitmap(lrc_u8g, 0, 1, 1, 8, chess_black_pieces_bm+24);
-  u8g2_DrawBitmap(lrc_u8g, 128-8, 1, 1, 8, chess_black_pieces_bm+24);
+    u8g2_DrawBitmap(lrc_u8g, 0, 1, 1, 8, chess_black_pieces_bm+24);
+    u8g2_DrawBitmap(lrc_u8g, 128-8, 1, 1, 8, chess_black_pieces_bm+24);
+ 
+  /*
+  {
+    u8g2_SetFont(lrc_u8g, MNU_FONT);
+    u8g2_DrawStr(lrc_u8g, 20, 10,  u8x8_u8toa(u8x8_read_pin_state(&(lrc_u8g->u8x8)), 3));
+    u8g2_DrawStr(lrc_u8g, 40, 10,  u8x8_u8toa(lrc_u8g->u8x8.debounce_default_pin_state, 3));    
+  }
+  */
 
   
   for( i = 0; i < mnu_max; i++ )

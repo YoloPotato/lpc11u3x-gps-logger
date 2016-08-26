@@ -11,6 +11,20 @@
 #define I2C_DATA_PIN  21
 #define I2C_DATA_PORT 0
 
+#define KEY_SELECT_PIN 14
+#define KEY_SELECT_PORT 0
+#define KEY_SELECT_FN (IOCON_FUNC1|IOCON_DIGMODE_EN)
+
+#define KEY_PREV_PIN 19
+#define KEY_PREV_PORT 1
+
+#define KEY_NEXT_PIN 1
+#define KEY_NEXT_PORT 0
+
+#define KEY_HOME_PIN 15
+#define KEY_HOME_PORT 0
+#define KEY_HOME_FN (IOCON_FUNC1|IOCON_DIGMODE_EN)
+
 uint8_t u8x8_gpio_and_delay_lpc11u3x(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
   switch(msg)
@@ -21,6 +35,19 @@ uint8_t u8x8_gpio_and_delay_lpc11u3x(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int,
       Chip_IOCON_PinMuxSet(LPC_IOCON, I2C_DATA_PORT, I2C_DATA_PIN, IOCON_MODE_PULLUP);
       Chip_GPIO_SetPinDIRInput(LPC_GPIO, I2C_CLOCK_PORT, I2C_CLOCK_PIN);
       Chip_GPIO_SetPinDIRInput(LPC_GPIO, I2C_DATA_PORT, I2C_DATA_PIN);    
+
+      Chip_IOCON_PinMuxSet(LPC_IOCON, KEY_SELECT_PORT, KEY_SELECT_PIN, KEY_SELECT_FN|IOCON_MODE_PULLUP);    
+      Chip_GPIO_SetPinDIRInput(LPC_GPIO, KEY_SELECT_PORT, KEY_SELECT_PIN);
+
+      Chip_IOCON_PinMuxSet(LPC_IOCON, KEY_PREV_PORT, KEY_PREV_PIN, IOCON_MODE_PULLUP);    
+      Chip_GPIO_SetPinDIRInput(LPC_GPIO, KEY_PREV_PORT, KEY_PREV_PIN);
+
+      Chip_IOCON_PinMuxSet(LPC_IOCON, KEY_NEXT_PORT, KEY_NEXT_PIN, IOCON_MODE_PULLUP);    
+      Chip_GPIO_SetPinDIRInput(LPC_GPIO, KEY_NEXT_PORT, KEY_NEXT_PIN);
+
+      Chip_IOCON_PinMuxSet(LPC_IOCON, KEY_HOME_PORT, KEY_HOME_PIN, KEY_HOME_FN|IOCON_MODE_PULLUP);    
+      Chip_GPIO_SetPinDIRInput(LPC_GPIO, KEY_HOME_PORT, KEY_HOME_PIN);
+
       break;
     case U8X8_MSG_DELAY_NANO:
       /* not required for SW I2C */
@@ -66,16 +93,20 @@ uint8_t u8x8_gpio_and_delay_lpc11u3x(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int,
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, I2C_DATA_PORT, I2C_DATA_PIN);
       }
       break;
-    case U8X8_PIN_MENU_SELECT:
-      u8x8_SetGPIOResult(u8x8, 1);
+    case U8X8_MSG_GPIO_MENU_SELECT:
+      u8x8_SetGPIOResult(u8x8, Chip_GPIO_GetPinState(LPC_GPIO, KEY_SELECT_PORT, KEY_SELECT_PIN));
       break;
-    case U8X8_PIN_MENU_NEXT:
-      u8x8_SetGPIOResult(u8x8, 1);
+    case U8X8_MSG_GPIO_MENU_NEXT:
+      u8x8_SetGPIOResult(u8x8, Chip_GPIO_GetPinState(LPC_GPIO, KEY_NEXT_PORT, KEY_NEXT_PIN));
       break;
-    case U8X8_PIN_MENU_PREV:
-      u8x8_SetGPIOResult(u8x8, 1);
+    case U8X8_MSG_GPIO_MENU_PREV:
+      u8x8_SetGPIOResult(u8x8, Chip_GPIO_GetPinState(LPC_GPIO, KEY_PREV_PORT, KEY_PREV_PIN));
       break;
-    case U8X8_PIN_MENU_HOME:
+    
+    case U8X8_MSG_GPIO_MENU_HOME:
+      u8x8_SetGPIOResult(u8x8, Chip_GPIO_GetPinState(LPC_GPIO, KEY_HOME_PORT, KEY_HOME_PIN));
+      break;
+    default:
       u8x8_SetGPIOResult(u8x8, 1);
       break;
   }
