@@ -20,6 +20,7 @@ uint8_t u8x8_gpio_and_delay_lpc11u3x(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int,
 /*=======================================================================*/
 /* little_rook_chess.c */
 void chess_Init(u8g2_t *u8g, uint8_t body_color);
+void chess_exec(void) ;
 
 
 /*=======================================================================*/
@@ -39,31 +40,6 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
   sys_tick_irq_cnt++;
 }
 
-/*=======================================================================*/
-void draw(u8g2_t *u8g2)
-{
-    u8g2_SetFontMode(u8g2, 1);	// Transparent
-    u8g2_SetFontDirection(u8g2, 0);
-    u8g2_SetFont(u8g2, u8g2_font_inb24_mf);
-    u8g2_DrawStr(u8g2, 0, 30, "U");
-    
-    u8g2_SetFontDirection(u8g2, 1);
-    u8g2_SetFont(u8g2, u8g2_font_inb30_mn);
-    u8g2_DrawStr(u8g2, 21,8,"8");
-        
-    u8g2_SetFontDirection(u8g2, 0);
-    u8g2_SetFont(u8g2, u8g2_font_inb24_mf);
-    u8g2_DrawStr(u8g2, 51,30,"g");
-    u8g2_DrawStr(u8g2, 67,30,"\xb2");
-    
-    u8g2_DrawHLine(u8g2, 2, 35, 47);
-    u8g2_DrawHLine(u8g2, 3, 36, 47);
-    u8g2_DrawVLine(u8g2, 45, 32, 12);
-    u8g2_DrawVLine(u8g2, 46, 33, 12);
-  
-    u8g2_SetFont(u8g2, u8g2_font_4x6_tr);
-    u8g2_DrawStr(u8g2, 1,54,"github.com/olikraus/u8g2");
-}
 
 
 /*=======================================================================*/
@@ -99,24 +75,9 @@ int __attribute__ ((noinline)) main(void)
   u8g2_InitDisplay(&u8g2);
   u8g2_SetPowerSave(&u8g2, 0);
   chess_Init(&u8g2, 1);  /* assuming OLED here, so make the body_color be 1 for the white OLED pixel */
+  chess_exec();
 
 
-  for(;;)
-  {
-    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
-    u8g2_FirstPage(&u8g2);
-    do
-    {
-      draw(&u8g2);
-    } while( u8g2_NextPage(&u8g2) );
-
-      Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
-    u8g2_FirstPage(&u8g2);
-    do
-    {
-      draw(&u8g2);
-    } while( u8g2_NextPage(&u8g2) );
-  }
   
   for(;;)
   {

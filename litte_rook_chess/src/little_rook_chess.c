@@ -98,28 +98,10 @@
 	U8g2/Arduboy Port
 */
 
-#include <Arduino.h>
-#include <U8g2lib.h>
-
-#ifdef U8X8_HAVE_HW_SPI
-#include <SPI.h>
-#endif
-#ifdef U8X8_HAVE_HW_I2C
-#include <Wire.h>
-#endif
+#include <u8g2.h>
 
 
-/*
-  U8glib Example Overview:
-    Frame Buffer Examples: clearBuffer/sendBuffer. Fast, but may not work with all Arduino boards because of RAM consumption
-    Page Buffer Examples: firstPage/nextPage. Less RAM usage, should work with all Arduino boards.
-    U8x8 Text Only Example: No RAM usage, direct communication with display controller. No graphics, 8x8 Text only.
-    
-  This is a page buffer example.    
-*/
 
-// Only Arduboy Constructor is here, however other displays are also possible, see here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
-U8G2_SSD1306_128X64_NONAME_1_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/ 12, /* dc=*/ 4, /* reset=*/ 6);	// Arduboy (Production, Kickstarter Edition)
 
 
 
@@ -2295,18 +2277,19 @@ void chess_Step(uint8_t keycode)
 
 #endif	/* UNIX_MAIN */
 
-void loop(void) {
+void chess_exec(void) 
+{
   static uint8_t keycode = 0;
   
   u8g2_FirstPage(lrc_u8g);
   do {
     chess_Draw();
     if ( keycode == 0 )
-      keycode = u8g2_GetMenuEvent(lrc_u8g);
+      keycode = u8x8_GetMenuEvent(u8g2_GetU8x8(lrc_u8g));
   } while ( u8g2_NextPage(lrc_u8g) );
 
   if ( keycode == 0 )
-      keycode = u8g2_GetMenuEvent(lrc_u8g);
+      keycode = u8x8_GetMenuEvent(u8g2_GetU8x8(lrc_u8g));
 
   if ( keycode == U8X8_MSG_GPIO_MENU_DOWN )
     keycode = CHESS_KEY_NEXT;
