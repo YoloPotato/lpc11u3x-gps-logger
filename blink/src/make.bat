@@ -1,7 +1,7 @@
 echo off
 rem make.bat
 rem
-rem Create blink.hex file on windows operating system.
+rem Create binary file for LPC11U35 on windows operating system.
 rem Requires https://launchpad.net/gcc-arm-embedded/ “Win32 Installer”
 rem
 set TARGET=blink
