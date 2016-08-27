@@ -4,7 +4,7 @@ rem
 rem Create firmware binary file for LPC11U35 on windows operating system.
 rem Requires https://launchpad.net/gcc-arm-embedded/ “Win32 Installer”
 rem
-set TARGET=blink
+set TARGET=u8g2_logo
 rem Change the following path if required:
 set GNUARMPATH="C:\Program Files (x86)\GNU Tools ARM Embedded\5.4 2016q2"
 
@@ -13,9 +13,10 @@ set OBJCOPY=%GNUARMPATH%\bin\arm-none-eabi-objcopy.exe
 set CCFLAGS=-DCORE_M0 -Os -flto -mthumb -mcpu=cortex-m0 -Wall -ffunction-sections -fdata-sections -std=gnu99 
 set LDFLAGS=-Wl,--gc-sections  -Wl,--undefined=arm_stack_area -Wl,--undefined=__isr_vector
 set LIBS=--specs=nano.specs -lc -lc -lnosys -L. -T lpc11u35.ld
-set GCCINC=-I. -I..\lpc_chip_11uxx_lib\inc
+set GCCINC=-I. -I..\lpc_chip_11uxx_lib\inc -I..\u8g2
 set SRC=
 for %%f in (..\lpc_chip_11uxx_lib\src\*.c) do call set SRC=%%SRC%% %%f
+for %%f in (..\u8g2\*.c) do call set SRC=%%SRC%% %%f
 for %%f in (*.c) do call set SRC=%%SRC%% %%f
 echo on
 %GCC% %GCCINC% %CCFLAGS%%SRC% %LDFLAGS% %LIBS% -o %TARGET%.elf
