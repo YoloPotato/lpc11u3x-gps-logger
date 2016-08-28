@@ -34,7 +34,7 @@ GCCBINPATH:=/usr/bin/
 # Project Information
 
 # The name for the project
-TARGETNAME:=u8g2_logo
+TARGETNAME:=fatfs_generic
 
 # The source files of the project
 SRC:=$(wildcard *.c)
@@ -49,6 +49,10 @@ SYSSRC:=$(wildcard ../lpc_chip_11uxx_lib/src/*.c)
 # Include directory for the u8g2 include files
 U8G2INC:=../u8g2
 U8G2SRC:=$(wildcard ../u8g2/*.c)
+
+# directory for FatFS
+FFINC:=../fatfs
+FFSRC:=$(wildcard ../fatfs/*.c)
 
 # Directory for the linker script
 LDSCRIPTDIR:=.
@@ -65,7 +69,7 @@ HEXNAME:=$(TARGETNAME).hex
 BINNAME:=$(TARGETNAME).bin
 DISNAME:=$(TARGETNAME).dis
 MAPNAME:=$(TARGETNAME).map
-OBJ:=$(SRC:.c=.o) $(SYSSRC:.c=.o) $(U8G2SRC:.c=.o)
+OBJ:=$(SRC:.c=.o) $(SYSSRC:.c=.o) $(U8G2SRC:.c=.o) $(FFSRC:.c=.o)
 
 # Replace standard build tools by avr tools
 CC:=$(GCCBINPATH)arm-none-eabi-gcc
@@ -76,7 +80,7 @@ SIZE:=$(GCCBINPATH)arm-none-eabi-size
 
 # Common flags
 COMMON_FLAGS = -mthumb -mcpu=$(MCPU)
-COMMON_FLAGS += -Wall -I. -I$(SYSINC) -I$(U8G2INC)
+COMMON_FLAGS += -Wall -I. -I$(SYSINC) -I$(U8G2INC) -I$(FFINC)
 # define stack size (defaults to 0x0100)  
 # COMMON_FLAGS += -D__STACK_SIZE=0x0100
 # define constant for lpcopen library

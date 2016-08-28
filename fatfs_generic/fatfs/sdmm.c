@@ -28,58 +28,61 @@
 
 
 #include "diskio.h"		/* Common include file for FatFs and disk I/O layer */
+#include "delay.h"
 
 
 /*-------------------------------------------------------------------------*/
 /* Platform dependent macros and functions needed to be modified           */
 /*-------------------------------------------------------------------------*/
 
-#include <avr/io.h>			/* Include device specific declareation file here */
+#include "chip.h"			/* Include device specific declareation file here */
 
+/* Initialize port for MMC DO as input */
+#define DO_INIT()	\
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 15, IOCON_FUNC0|IOCON_DIGMODE_EN|IOCON_MODE_PULLUP); /* probably pullup is not required */ \
+      Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 15)
+/* Test for MMC DO ('H':true, 'L':false) */
+#define DO			\
+  Chip_GPIO_GetPinState(LPC_GPIO, 1, 15)
 
-#define DO_INIT()					/* Initialize port for MMC DO as input */
-#define DO			(PINB &	0x01)	/* Test for MMC DO ('H':true, 'L':false) */
+/* Initialize port for MMC DI as output */
+#define DI_INIT()	\
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 23, IOCON_FUNC0|IOCON_DIGMODE_EN);	\
+      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 23)      
+/* Set MMC DI "high" */
+#define DI_H()		\
+	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 23)
+/* Set MMC DI "low" */
+#define DI_L()		\
+	Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 23)
 
-#define DI_INIT()	DDRB  |= 0x02	/* Initialize port for MMC DI as output */
-#define DI_H()		PORTB |= 0x02	/* Set MMC DI "high" */
-#define DI_L()		PORTB &= 0xFD	/* Set MMC DI "low" */
+/* Initialize port for MMC SCLK as output */
+#define CK_INIT()	\
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 16, IOCON_FUNC0|IOCON_DIGMODE_EN);	\
+      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 16)     
+/* Set MMC SCLK "high" */
+#define CK_H()		\
+	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 16); __DSB()	/* __DSB is required, but not sure why. Is it the delay or the data sync??? */
+/* Set MMC SCLK "low" */
+#define	CK_L()	\
+	Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 16); __DSB()
 
-#define CK_INIT()	DDRB  |= 0x04	/* Initialize port for MMC SCLK as output */
-#define CK_H()		PORTB |= 0x04	/* Set MMC SCLK "high" */
-#define	CK_L()		PORTB &= 0xFB	/* Set MMC SCLK "low" */
-
-#define CS_INIT()	DDRB  |= 0x08	/* Initialize port for MMC CS as output */
-#define	CS_H()		PORTB |= 0x08	/* Set MMC CS "high" */
-#define CS_L()		PORTB &= 0xF7	/* Set MMC CS "low" */
+/* Initialize port for MMC CS as output */
+#define CS_INIT()	\
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 15, IOCON_FUNC1|IOCON_DIGMODE_EN);	/* FUNC1 for 0_15 !!! */ \
+      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 15)      
+/* Set MMC CS "high" */
+#define	CS_H()	\
+	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 15); __DSB()
+/* Set MMC CS "low" */
+#define CS_L()		\
+	Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 15); __DSB()
 
 
 static
 void dly_us (UINT n)	/* Delay n microseconds (avr-gcc -Os) */
 {
-	do {
-		PINB;
-#if F_CPU >= 6000000
-		PINB;
-#endif
-#if F_CPU >= 7000000
-		PINB;
-#endif
-#if F_CPU >= 8000000
-		PINB;
-#endif
-#if F_CPU >= 9000000
-		PINB;
-#endif
-#if F_CPU >= 10000000
-		PINB;
-#endif
-#if F_CPU >= 12000000
-		PINB; PINB;
-#endif
-#if F_CPU >= 14000000
-#error Too fast clock
-#endif
-	} while (--n);
+  delay_micro_seconds(n);
 }
 
 
