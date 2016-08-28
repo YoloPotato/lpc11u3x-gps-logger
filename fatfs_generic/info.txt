@@ -1,0 +1,2 @@
+The generic example will not used HW SPI.
+Maybe use the LPC176x example from the FatFS sources.
