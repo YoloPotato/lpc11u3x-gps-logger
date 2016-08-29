@@ -69,3 +69,31 @@ unsigned int EEPROM_Read(uint8_t AddressToRead, void* DataArray, uint8_t BytesTo
   return (uint8_t)IAP_Result[0];
 }
 
+/*
+  
+*/
+uint8_t EEPROM_Test(void)
+{
+  uint32_t x, y, a;
+  x = 123456789;
+  y = 0;
+  if ( EEPROM_Write(0, &x, sizeof(x)) != 0 )
+    return 0;
+  if ( EEPROM_Read(0, &y, sizeof(y)) != 0 )
+    return 0;
+  if ( x != y )
+    return 0;
+  a = 0x0ffaa5533;
+  if ( EEPROM_Write(sizeof(x), &a, sizeof(a)) != 0 )
+    return 0;
+  if ( EEPROM_Read(0, &y, sizeof(y)) != 0 )
+    return 0;
+  if ( x != y )
+    return 0;
+  if ( EEPROM_Read(sizeof(x), &y, sizeof(y)) != 0 )
+    return 0;
+  if ( a != y )
+    return 0;
+  
+  return 1;
+}

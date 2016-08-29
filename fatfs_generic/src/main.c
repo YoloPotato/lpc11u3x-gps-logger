@@ -12,6 +12,7 @@
 #include "delay.h"
 #include "u8g2.h"
 #include "ff.h"		/* Declarations of FatFs API */
+#include "eeprom.h"
 
 
 /*=======================================================================*/
@@ -81,6 +82,7 @@ const char *fr_to_str[] =
 int __attribute__ ((noinline)) main(void)
 {
   FRESULT fr;
+  uint8_t y = 0;
 
   /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
   /* it will also enable IOCON, see sysinit_11xx.c */
@@ -110,21 +112,32 @@ int __attribute__ ((noinline)) main(void)
   u8x8_ClearDisplay(&u8x8);
   u8x8_SetPowerSave(&u8x8, 0);
   u8x8_SetFont(&u8x8, u8x8_font_amstrad_cpc_extended_r);
-  u8x8_DrawString(&u8x8, 0, 0, "LPC11U35");
+  u8x8_DrawString(&u8x8, 0, y++, "LPC11U35");
+
+  if ( EEPROM_Test() != 0 )
+  {
+    u8x8_DrawString(&u8x8, 0, y++, "EEPROM ok");    
+  }
+  else
+  {
+    u8x8_DrawString(&u8x8, 0, y++, "EEPROM failed");    
+  }
+
 
   fr = f_mount(&FatFs, "", 1);		/* Give a work area to the default drive and force a mount (http://elm-chan.org/fsw/ff/en/mount.html) */
   if ( fr == FR_OK )
   {
     char buf[24];
-    u8x8_DrawString(&u8x8, 0, 1, "Mount:");    
+    u8x8_DrawString(&u8x8, 0, y, "Mount:");    
     f_getlabel("", buf, NULL);
-    u8x8_DrawString(&u8x8, 6, 1, buf);    
+    u8x8_DrawString(&u8x8, 6, y, buf);    
+    y++;
 
     fr = f_open(&Fil, "newfile.txt", FA_WRITE | FA_CREATE_ALWAYS); /* Create a file */
     if ( fr == FR_OK) 
     {	
       UINT bw;
-      u8x8_DrawString(&u8x8, 0, 2, "File open ok");    
+      u8x8_DrawString(&u8x8, 0, y++, "File open ok");    
       fr =f_write(&Fil, "It works!\r\n", 11, &bw);	/* Write data to the file */
       f_close(&Fil);								/* Close the file */
 
@@ -133,10 +146,11 @@ int __attribute__ ((noinline)) main(void)
   }
   else
   {
-    u8x8_DrawString(&u8x8, 0, 1, "Mount failed");    
-    u8x8_DrawString(&u8x8, 0, 2, fr_to_str[fr]);    
+    u8x8_DrawString(&u8x8, 0, y++, "Mount failed");    
+    u8x8_DrawString(&u8x8, 0, y++, fr_to_str[fr]);    
     
   }
+  
 
 
   for(;;)
