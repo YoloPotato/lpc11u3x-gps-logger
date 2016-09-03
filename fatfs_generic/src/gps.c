@@ -67,7 +67,7 @@ void gps_float_to_str(gps_float_t f, char *s)
     gps_ltoa(s+4, (uint32_t)g, 6);
     s[10] = '\0';
   }
-
 }
+
 
 

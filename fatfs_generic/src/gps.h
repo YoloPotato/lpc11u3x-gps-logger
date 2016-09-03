@@ -28,6 +28,7 @@ struct _gps_pos_struct
 typedef struct _gps_pos_struct gps_pos_t;
 
 
+void gps_ltoa(char *s, uint32_t x, uint8_t cnt);
 void gps_float_to_str(gps_float_t f, char *s);
 
 
