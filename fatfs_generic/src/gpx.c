@@ -1,7 +1,20 @@
 /*
 
   gpx.c
-  
+
+
+https://en.wikipedia.org/wiki/GPS_Exchange_Format
+
+http://www.topografix.com/GPX/1/1/
+
+
+
+
+48.635910, 8.8932 75
+48.6355 84, 8.8926 85
+48.635573, 8.8925 94
+48.635662, 8.892685
+
 TP.time
 In: TP, Threshold [s]
 
