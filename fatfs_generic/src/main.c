@@ -13,6 +13,7 @@
 #include "u8g2.h"
 #include "ff.h"		/* Declarations of FatFs API */
 #include "eeprom.h"
+#include "gpx.h"
 
 
 /*=======================================================================*/
@@ -149,6 +150,20 @@ int __attribute__ ((noinline)) main(void)
     u8x8_DrawString(&u8x8, 0, y++, "Mount failed");    
     u8x8_DrawString(&u8x8, 0, y++, fr_to_str[fr]);    
     
+  }
+  
+  {
+    gps_pos_t p;
+    p.latitude = 1.1111;
+    p.longitude = 2.2222;
+    if ( gpx_write(&p) == 0 )
+    {
+      u8x8_DrawString(&u8x8, 0, y++, "gps wr failed");    
+    }
+    else
+    {
+      u8x8_DrawString(&u8x8, 0, y++, "gps wr ok");    
+    }
   }
   
 

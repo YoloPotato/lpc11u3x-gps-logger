@@ -67,12 +67,12 @@ const char gpx_header[] = "<gpx version=\"1.1\" "\
 const char gpx_footer[] = " </trk>\n</gpx>\n";
 const char gpx_track_start[] = "  <trkseg>\n";
 const char gpx_track_end[] = "  </trkseg>\n";
-const char gpx_trkpt_start[] = "    <trkpt";
+const char gpx_trkpt_start[] = "   <trkpt";
 const char gpx_lat_pre[] = " lat=";
 const char gpx_lon_pre[] = " lon=";
 const char gpx_quote[] = "\"";
 const char gpx_tag_close[] = ">\n";
-const char gpx_trkpt_end[] = "    </trkpt>\n";
+const char gpx_trkpt_end[] = "   </trkpt>\n";
 
 
 void gpx_log(const char *msg, FRESULT fr)
@@ -141,7 +141,8 @@ int gpx_seek_for_append(void)
 {
   
   FRESULT fr;
-  fr = f_lseek(&gpx_file, f_size(&gpx_file) - sizeof(gpx_track_end) - sizeof(gpx_footer)); 
+  /* sizeof could be used instead of strlen, but then \0 has to be considered */
+  fr = f_lseek(&gpx_file, f_size(&gpx_file) - strlen(gpx_track_end) - strlen(gpx_footer)); 
   if ( fr == FR_OK) 
   {	
     return 1;
@@ -167,7 +168,7 @@ int gpx_write_str(const char *s, const char *log)
 {
   UINT bw;
   FRESULT fr;
-  fr = f_write(&gpx_file, gpx_header, strlen(s), &bw);
+  fr = f_write(&gpx_file, s, strlen(s), &bw);
   if ( fr == FR_OK )
   {
     return 1;

@@ -7,6 +7,8 @@
 #ifndef _GPS_H
 #define _GPS_H
 
+#include <stdint.h>
+
 /*
   gps_float_t is "float" which has 23 bits resolution.
   these are about 7 (6.9) decimal digits.
