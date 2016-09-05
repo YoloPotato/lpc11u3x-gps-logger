@@ -72,3 +72,23 @@ void display_Write(const char *str)
   term_WriteString(&display_term, str);
 }
 
+
+
+void display_WriteUnsigned(uint32_t v)
+{
+  char buf[12];
+  char *p = buf+11;
+  *p = '\0';
+  p--;
+  while (v >= 10) 
+  {
+    *p = (v % 10);
+    v /= 10;
+    *p += '0';
+    p--;
+  }
+  *p = v + '0';
+  display_Write(p);
+}
+
+

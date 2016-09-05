@@ -32,12 +32,18 @@ FIL Fil;			/* File object needed for each open file */
 
 
 volatile uint32_t sys_tick_irq_cnt=0;
-
+volatile uint32_t uart_irq_cnt=0;
 
 void __attribute__ ((interrupt)) SysTick_Handler(void)
 {
   sys_tick_irq_cnt++;
 }
+
+void __attribute__ ((interrupt)) UART_IRQ(void)
+{
+  uart_irq_cnt++;
+}
+
 
 
 
@@ -76,6 +82,7 @@ int __attribute__ ((noinline)) main(void)
 {
   FRESULT fr;
   uint8_t y = 0;
+  uint32_t baud;
 
   /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
   /* it will also enable IOCON, see sysinit_11xx.c */
@@ -94,11 +101,28 @@ int __attribute__ ((noinline)) main(void)
   /* turn on IOCON... this is also done in Chip_SystemInit() */
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
   
-  Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
-
   
+  /* this is the earliest time we can access the display (if any...) */
   display_Init();
   display_Write("LPC11U35 GPSLOG\n");
+
+  /* configure LED for the eHaJo board */
+  Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
+  
+  /* setup UART for GPS */
+  display_Write("UART Init\n");
+  
+  Chip_UART_Init(LPC_USART);
+  Chip_UART_DisableDivisorAccess(LPC_USART);			/* divisor access must be disabled for IRQ setup, but this is already done in init */
+  Chip_UART_IntEnable(LPC_USART, UART_IER_RBRINT);	/* enable receive interrupt */
+  NVIC_EnableIRQ(UART0_IRQn);
+
+  /* setup Baud rate */
+  baud = Chip_UART_SetBaudFDR(LPC_USART, 9600);	/* puuhh... this is a HUGE function */
+  display_Write("UART ");
+  display_WriteUnsigned(baud);
+  display_Write(" Baud\n");
+  
 
   if ( EEPROM_Test() != 0 )
   {
@@ -161,6 +185,12 @@ int __attribute__ ((noinline)) main(void)
     
     Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
     delay_micro_seconds(500UL*1000UL);
+
+    display_Write("IRQs: ");
+    display_WriteUnsigned(uart_irq_cnt);
+    display_Write("\n");
+    
+    
   }
   
   

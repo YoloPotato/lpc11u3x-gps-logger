@@ -12,6 +12,7 @@
 /*=======================================================================*/
 /* external functions */
 void __attribute__ ((interrupt)) SysTick_Handler(void);
+void __attribute__ ((interrupt)) UART_IRQ(void);
 int __attribute__ ((noinline)) main(void);
 
 
@@ -146,7 +147,7 @@ isr_handler_t __isr_vector[48] __attribute__ ((section(".isr_vector"))) __attrib
   0,                                /* TIMER_32_0_IRQn               = 18,		 32-bit Timer0 Interrupt                          */
   0,                                /* TIMER_32_1_IRQn               = 19,		 32-bit Timer1 Interrupt                          */
   0,                                /* SSP0_IRQn                     = 20,		 SSP0 Interrupt                                   */
-  0,                                /* UART0_IRQn                    = 21,		 UART Interrupt                                   */
+  UART_IRQ,                    /* UART0_IRQn                    = 21,		 UART Interrupt                                   */
   0,                                /* USB0_IRQn                     = 22,		 USB IRQ interrupt                                */
   0,                                /* USB0_FIQ_IRQn                 = 23,		 USB FIQ interrupt                                */
   0,                                /* ADC_IRQn                      = 24,		 A/D Converter Interrupt                          */
