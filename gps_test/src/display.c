@@ -47,7 +47,7 @@ void display_show_cb(term_t *term, uint8_t msg)
   {
     case TERM_MSG_POST_NEWLINE:
     case TERM_MSG_POST_SCROLL:
-    case TERM_MSG_POST_CHAR:
+    //case TERM_MSG_POST_CHAR:
       display_write_screen(term);
       break;
     

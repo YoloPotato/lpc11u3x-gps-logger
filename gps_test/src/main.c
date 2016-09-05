@@ -13,21 +13,13 @@
 #include "u8g2.h"
 #include "ff.h"		/* Declarations of FatFs API */
 #include "eeprom.h"
+#include "display.h"
 #include "gpx.h"
 
 
-/*=======================================================================*/
-/* u8x8_lpc11u3x.c */
-uint8_t u8x8_gpio_and_delay_lpc11u3x(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
-
-/*=======================================================================*/
-/* little_rook_chess.c */
-void chess_Init(u8g2_t *u8g, uint8_t body_color);
-void chess_exec(void) ;
 
 
 /*=======================================================================*/
-u8x8_t u8x8;
 
 FATFS FatFs;		/* FatFs work area needed for each volume */
 FIL Fil;			/* File object needed for each open file */
@@ -104,24 +96,17 @@ int __attribute__ ((noinline)) main(void)
   
   Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
 
-  //delay_micro_seconds(10UL*1000UL);
-
-  u8x8_Setup(&u8x8, u8x8_d_ssd1306_128x64_noname, u8x8_cad_ssd13xx_i2c, u8x8_byte_sw_i2c, u8x8_gpio_and_delay_lpc11u3x);
-
-  //u8g2_Setup_ssd1306_i2c_128x64_noname_1(&u8g2, U8G2_R0, u8x8_byte_sw_i2c, u8x8_gpio_and_delay_lpc11u3x);
-  u8x8_InitDisplay(&u8x8);
-  u8x8_ClearDisplay(&u8x8);
-  u8x8_SetPowerSave(&u8x8, 0);
-  u8x8_SetFont(&u8x8, u8x8_font_amstrad_cpc_extended_r);
-  u8x8_DrawString(&u8x8, 0, y++, "LPC11U35");
+  
+  display_Init();
+  display_Write("LPC11U35 GPSLOG\n");
 
   if ( EEPROM_Test() != 0 )
   {
-    u8x8_DrawString(&u8x8, 0, y++, "EEPROM ok");    
+    display_Write("EEPROM ok\n");
   }
   else
   {
-    u8x8_DrawString(&u8x8, 0, y++, "EEPROM failed");    
+    display_Write("EEPROM failed\n");
   }
 
 
@@ -129,16 +114,16 @@ int __attribute__ ((noinline)) main(void)
   if ( fr == FR_OK )
   {
     char buf[24];
-    u8x8_DrawString(&u8x8, 0, y, "Mount:");    
+    display_Write("Mount:");
     f_getlabel("", buf, NULL);
-    u8x8_DrawString(&u8x8, 6, y, buf);    
+    display_Write(buf);
+    display_Write("\n");
     y++;
 
     fr = f_open(&Fil, "newfile.txt", FA_WRITE | FA_CREATE_ALWAYS); /* Create a file */
     if ( fr == FR_OK) 
     {	
       UINT bw;
-      u8x8_DrawString(&u8x8, 0, y++, "File open ok");    
       fr =f_write(&Fil, "It works!\r\n", 11, &bw);	/* Write data to the file */
       f_close(&Fil);								/* Close the file */
 
@@ -147,8 +132,9 @@ int __attribute__ ((noinline)) main(void)
   }
   else
   {
-    u8x8_DrawString(&u8x8, 0, y++, "Mount failed");    
-    u8x8_DrawString(&u8x8, 0, y++, fr_to_str[fr]);    
+    display_Write("Mount failed\n");
+    display_Write(fr_to_str[fr]);
+    display_Write("\n");
     
   }
   
@@ -158,11 +144,11 @@ int __attribute__ ((noinline)) main(void)
     p.longitude = 2.2222;
     if ( gpx_write(&p) == 0 )
     {
-      u8x8_DrawString(&u8x8, 0, y++, "gps wr failed");    
+      display_Write("gps wr failed\n");
     }
     else
     {
-      u8x8_DrawString(&u8x8, 0, y++, "gps wr ok");    
+      display_Write("gps wr ok\n");
     }
   }
   

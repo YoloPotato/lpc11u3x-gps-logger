@@ -34,7 +34,7 @@ GCCBINPATH:=/usr/bin/
 # Project Information
 
 # The name for the project
-TARGETNAME:=fatfs_generic
+TARGETNAME:=gps_test
 
 # The source files of the project
 SRC:=$(wildcard *.c)
