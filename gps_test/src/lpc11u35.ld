@@ -162,7 +162,16 @@ SECTIONS
 	/* Check if data + heap + stack exceeds RAM limit */
 	ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
 	
-	/* http://www.lpcware.com/content/forum/lpc1788-flash-signature-generation */
-	/* section 20.7/page 390 of the LPC11U3x User Manual */
+	/* 
+	  http://www.lpcware.com/content/forum/lpc1788-flash-signature-generation
+	  Section 20.7/page 390 of the LPC11U3x User Manual
+	
+	  Linker works with even addresses, however to indicate thumb address mode, 
+	  the lowest bit of the address is set to one. For the checksum calculation we
+	  only have the even addresses, however later in the isr table the compiler will
+	  store the odd addresses for the three handler subprocedures if compiled in
+	  thumb mode. Because of this, 3 is added to consider the three odd handler calls. 
+	*/	
 	LPC_checksum = 0- (__StackTop + Reset_Handler + NMI_Handler + HardFault_Handler + 3 /* three entries */);
 }
+
