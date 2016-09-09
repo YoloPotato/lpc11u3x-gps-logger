@@ -12,7 +12,7 @@
 /*=======================================================================*/
 /* external functions */
 void __attribute__ ((interrupt)) SysTick_Handler(void);
-void __attribute__ ((interrupt)) UART_IRQ(void);
+void __attribute__ ((interrupt, used)) UART_IRQ(void);
 int __attribute__ ((noinline)) main(void);
 
 

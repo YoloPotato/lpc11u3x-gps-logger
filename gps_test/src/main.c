@@ -33,15 +33,31 @@ FIL Fil;			/* File object needed for each open file */
 
 volatile uint32_t sys_tick_irq_cnt=0;
 volatile uint32_t uart_irq_cnt=0;
+volatile uint32_t uart_data_cnt=0;
+volatile uint8_t uart_data;
 
 void __attribute__ ((interrupt)) SysTick_Handler(void)
 {
   sys_tick_irq_cnt++;
 }
 
-void __attribute__ ((interrupt)) UART_IRQ(void)
+
+void __attribute__ ((interrupt, used)) UART_IRQ(void)
 {
-  uart_irq_cnt++;
+  /* Read the IIR register. This is required. If not read the itq will not be cleared */
+  uint32_t iir = Chip_UART_ReadIntIDReg(LPC_USART);
+  if ( (iir & 1) == 0 )
+  {
+    /* count the number of interrupts */
+    uart_irq_cnt++;
+    while ( ( Chip_UART_ReadLineStatus(LPC_USART) & 1 ) != 0 )
+    {
+      /* count bytes */
+      uart_data_cnt++;
+      /* read the byte from the FIFO Buffer */
+      uart_data = Chip_UART_ReadByte(LPC_USART);
+    }
+  }
 }
 
 
@@ -99,7 +115,8 @@ int __attribute__ ((noinline)) main(void)
   Chip_GPIO_Init(LPC_GPIO);
   
   /* turn on IOCON... this is also done in Chip_SystemInit() */
-  Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
+  
+  Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON | SYSCTL_CLOCK_UART0 | SYSCTL_CLOCK_GPIO);
   
   
   /* this is the earliest time we can access the display (if any...) */
@@ -111,6 +128,9 @@ int __attribute__ ((noinline)) main(void)
   
   /* setup UART for GPS */
   display_Write("UART Init\n");
+  
+  Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 18, IOCON_FUNC1);	/* RxD */
+  Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 19, IOCON_FUNC1);	/* TxD */
   
   Chip_UART_Init(LPC_USART);
   Chip_UART_DisableDivisorAccess(LPC_USART);			/* divisor access must be disabled for IRQ setup, but this is already done in init */

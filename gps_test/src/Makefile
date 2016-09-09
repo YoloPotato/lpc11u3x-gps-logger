@@ -88,6 +88,8 @@ COMMON_FLAGS += -DCORE_M0
 # do not make a call to SystemInit()
 # COMMON_FLAGS += -Os -flto
 COMMON_FLAGS += -Os 
+# COMMON_FLAGS += -fstack-protector 
+# COMMON_FLAGS += -finstrument-functions
 # Do not use stand libs startup code. Uncomment this for gcclib procedures
 # memcpy still works, but might be required for __aeabi_uidiv
 # COMMON_FLAGS +=  -nostdlib
@@ -129,10 +131,17 @@ clean:
 	$(OBJCOPY) -O binary --gap-fill 255 --pad-to 65536 $< $@
 
 # explicit rules
-$(ELFNAME): $(LIBNAME)($(OBJ)) 
+$(ELFNAME): $(LIBNAME)($(OBJ)) libssp.a libssp_nonshared.a
 	$(LINK.o) $(LFLAGS) $(LIBNAME) $(LDLIBS) -o $@
 
 $(DISNAME): $(ELFNAME)
 	$(OBJDUMP) -D -S $< > $@
+
+# create empty ssp libs for -fstack-protector-all -fstack-protector
+libssp.a:
+	$(AR) rcs $@
+	
+libssp_nonshared.a:
+	$(AR) rcs $@
 
 	
