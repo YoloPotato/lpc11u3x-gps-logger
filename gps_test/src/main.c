@@ -21,8 +21,8 @@
 
 /*=======================================================================*/
 
-FATFS FatFs;		/* FatFs work area needed for each volume */
-FIL Fil;			/* File object needed for each open file */
+//FATFS FatFs;		/* FatFs work area needed for each volume */
+//FIL Fil;			/* File object needed for each open file */
 
 
 /*=======================================================================*/
@@ -100,8 +100,6 @@ const char *fr_to_str[] =
 */
 int __attribute__ ((noinline)) main(void)
 {
-  FRESULT fr;
-  uint8_t y = 0;
   uint32_t baud;
 
   /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
@@ -158,34 +156,6 @@ int __attribute__ ((noinline)) main(void)
   }
 
 
-  fr = f_mount(&FatFs, "", 1);		/* Give a work area to the default drive and force a mount (http://elm-chan.org/fsw/ff/en/mount.html) */
-  if ( fr == FR_OK )
-  {
-    char buf[24];
-    display_Write("Mount:");
-    f_getlabel("", buf, NULL);
-    display_Write(buf);
-    display_Write("\n");
-    y++;
-
-    fr = f_open(&Fil, "newfile.txt", FA_WRITE | FA_CREATE_ALWAYS); /* Create a file */
-    if ( fr == FR_OK) 
-    {	
-      UINT bw;
-      fr =f_write(&Fil, "It works!\r\n", 11, &bw);	/* Write data to the file */
-      f_close(&Fil);								/* Close the file */
-
-    }
-    
-  }
-  else
-  {
-    display_Write("Mount failed\n");
-    display_Write(fr_to_str[fr]);
-    display_Write("\n");
-    
-  }
-  
   {
     gps_pos_t p;
     p.latitude = 1.1111;
@@ -213,7 +183,7 @@ int __attribute__ ((noinline)) main(void)
     if ( is_output_uart_data_cnt )
     {
       is_output_uart_data_cnt = 0;
-      display_Write("UART RX: ");
+      display_Write("UART: ");
       display_WriteUnsigned(uart_data_cnt);
       display_Write("\n");
     }
