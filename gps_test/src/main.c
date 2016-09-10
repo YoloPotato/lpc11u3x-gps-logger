@@ -35,15 +35,43 @@ volatile uint32_t uart_data_cnt=0;
 
 volatile uint8_t is_output_last_unknown_msg = 0;
 volatile uint8_t is_output_uart_data_cnt = 0;
+volatile uint8_t is_output_sat_cnt = 0;
+volatile uint8_t is_output_gps_quality = 0;
+volatile uint8_t is_output_altitude = 0;
+volatile uint8_t is_output_pos = 0;
+volatile uint8_t is_output_time = 0;
+volatile uint8_t is_output_date = 0;
+
 
 void __attribute__ ((interrupt)) SysTick_Handler(void)
 {
   sys_tick_irq_cnt++;
-  if ( (sys_tick_irq_cnt & 0x03f) == 0 )
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0 )
     is_output_uart_data_cnt = 1;
     
-  if ( (sys_tick_irq_cnt & 0x03f) == 15 )
+  /*
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x01f )
     is_output_last_unknown_msg = 1;  
+  */
+  
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x02f )
+    is_output_sat_cnt = 1;  
+
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x03f )
+    is_output_gps_quality = 1;  
+  
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x04f )
+    is_output_altitude = 1;
+  
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x05f )
+    is_output_pos  = 1;
+
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x06f )
+    is_output_time = 1;
+ 
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x06f )
+    is_output_date = 1;
+  
 }
 
 
@@ -202,6 +230,76 @@ int __attribute__ ((noinline)) main(void)
       is_output_last_unknown_msg = 0;
       display_Write("? ");
       display_Write(pq.last_unknown_msg);
+      display_Write("\n");
+    }
+    
+
+    if ( is_output_sat_cnt )
+    {
+      is_output_sat_cnt = 0;
+      display_Write("SatCnt ");
+      display_WriteUnsigned(pq.sat_cnt);
+      display_Write("\n");
+    }
+    
+    if ( is_output_gps_quality ) 
+    {
+      is_output_gps_quality = 0;
+      display_Write("Quality ");
+      display_WriteUnsigned(pq.gps_quality);
+      display_Write("\n");
+    }
+    
+    if ( is_output_altitude )
+    {
+      int32_t alt = pq.interface.pos.altitude;
+      is_output_altitude = 0;
+      display_Write("Alt ");
+      if ( alt < 0 )
+      {
+	display_Write("-");
+	alt = -alt;
+      }
+      display_WriteUnsigned(alt);
+      display_Write("m\n");
+    }
+    
+    if ( is_output_pos )
+    {
+      is_output_pos = 0;
+      display_Write("Lat ");
+      display_WriteGpsFloat(pq.interface.pos.latitude);
+      display_Write("\n");
+      display_Write("Lon ");
+      display_WriteGpsFloat(pq.interface.pos.longitude);
+      display_Write("\n");
+    }
+    
+    if ( is_output_time )
+    {
+      is_output_time = 0;
+      display_Write("UTC ");
+      display_WriteUnsigned(pq.interface.hour);
+      display_Write(":");
+      display_WriteUnsigned(pq.interface.minute);
+      display_Write(":");
+      display_WriteUnsigned(pq.interface.second);
+      display_Write("\n");
+      
+      display_Write("Sec ");
+      display_WriteUnsigned(pq.interface.pos.time);
+      display_Write("\n");
+    }
+
+    if ( is_output_date )
+    {
+      is_output_date = 0;
+      display_Write("Date ");
+      display_WriteUnsigned(pq.interface.day);
+      display_Write(".");
+      display_WriteUnsigned(pq.interface.month);
+      display_Write(".");
+      display_WriteUnsigned(pq.interface.year);
       display_Write("\n");
     }
     

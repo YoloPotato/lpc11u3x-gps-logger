@@ -46,7 +46,7 @@ void display_show_cb(term_t *term, uint8_t msg)
   switch(msg)
   {
     case TERM_MSG_POST_NEWLINE:
-    case TERM_MSG_POST_SCROLL:
+    //case TERM_MSG_POST_SCROLL:
     //case TERM_MSG_POST_CHAR:
       display_write_screen(term);
       break;
@@ -92,3 +92,9 @@ void display_WriteUnsigned(uint32_t v)
 }
 
 
+void display_WriteGpsFloat(gps_float_t f)
+{
+  char s[18];
+  gps_float_to_str(f, s);
+  display_Write(s);
+}

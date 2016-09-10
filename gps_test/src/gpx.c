@@ -7,6 +7,7 @@ https://en.wikipedia.org/wiki/GPS_Exchange_Format
 
 http://www.topografix.com/GPX/1/1/
 
+http://www.w3schools.com/xml/schema_dtypes_date.asp
 
 
 
@@ -73,6 +74,8 @@ const char gpx_lon_pre[] = " lon=";
 const char gpx_quote[] = "\"";
 const char gpx_tag_close[] = ">\n";
 const char gpx_trkpt_end[] = "   </trkpt>\n";
+const char gpx_ele_start[] = "<ele>";
+const char gpx_ele_end[] = "</ele>";
 
 
 void gpx_log(const char *msg, FRESULT fr)
@@ -253,6 +256,21 @@ int gpx_write_gps_pos(gps_pos_t *pos)
   return 0;
 }
 
+int gps_write_track_altitude(gps_pos_t *pos)
+{
+  if ( gpx_write_str(gpx_ele_start, "ele start") != 0 )
+  {
+    if ( gpx_write_gps_float(pos->altitude) != 0 )
+    {
+      if ( gpx_write_str(gpx_ele_end, "ele end") != 0 )
+      {
+	return 1;
+      }  
+    }
+  }  
+  return 0;
+}
+
 int gpx_write_track_point(gps_pos_t *pos)
 {
   if ( gpx_write_track_point_start() != 0 )
@@ -262,6 +280,8 @@ int gpx_write_track_point(gps_pos_t *pos)
       if ( gpx_write_str(gpx_tag_close, ">") != 0 )
       {
 	/* ... */
+	
+	
 	if ( gpx_write_track_point_end() != 0 )
 	{
 	  return 1;

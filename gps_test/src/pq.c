@@ -7,7 +7,7 @@
 */
 #include <stddef.h>
 #include <string.h>
-//#include "datecalc.h"
+#include "datecalc.h"
 #include "pq.h"
 
 
@@ -15,6 +15,9 @@ void pq_Init(pq_t *pq)
 {
   memset(pq, 0, sizeof(pq_t));
   crb_Init(&(pq->crb));
+  pq->interface.pos.altitude = 0.0;
+  pq->interface.pos.longitude = 0.0;
+  pq->interface.pos.latitude = 0.0;
 }
 
 void pq_AddChar(pq_t *pq, uint8_t c)
@@ -233,13 +236,13 @@ uint8_t pq_CheckTwoChars(pq_t *pq, uint8_t *result, int16_t c1, int16_t c2)
 }
 
 /*
-  Assumes, that $GPRMC is alread paresed
+  Assumes, that $GPRMC is alread parsed
 
 $GPRMC,220516,A,5133.82,N,00042.24,W,173.8,231.8,130694,004.2,W*70
               1    2    3    4    5     6    7    8      9     10  11 12
 
 
-      1   220516     Time Stamp
+      1   220516     Time Stamp (UTC) in format HHMMSS 
       2   A          validity - A-ok, V-invalid
       3   5133.82    current Latitude
       4   N          North/South
@@ -247,7 +250,7 @@ $GPRMC,220516,A,5133.82,N,00042.24,W,173.8,231.8,130694,004.2,W*70
       6   W          East/West
       7   173.8      Speed in knots
       8   231.8      True course
-      9   130694     Date Stamp
+      9   130694     Date Stamp DDMMYY
       10  004.2      Variation
       11  W          East/West
       12  *70        checksum
@@ -263,11 +266,20 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
 {
   gps_float_t time;
   uint32_t date;
+  uint32_t int_time;
   uint8_t is_valid;
   uint8_t is_south;
   uint8_t is_west;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetFloat(pq, &time) == 0 ) return 0;
+
+  int_time = time;
+  pq->interface.hour = int_time / 10000;
+  pq->interface.minute = ((uint32_t)(int_time / 100)) % 100;
+  pq->interface.second = ((uint32_t)int_time) % 100;
+  pq->interface.millisecond = 0;	/* not used */
+
+  
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_CheckTwoChars(pq, &is_valid, 'V', 'A') == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;
@@ -286,6 +298,12 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
   if ( pq_GetFloat(pq, &(pq->interface.true_course)) == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetNum(pq, &date, NULL) == 0 ) return 0;  
+  
+  pq->interface.year = date % 100UL;
+  pq->interface.month = (date / 100UL) % 100UL;
+  pq->interface.day = (date / 10000UL) ;
+  
+  
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetFloat(pq, &(pq->interface.magnetic_variation)) == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;
@@ -304,6 +322,15 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
     pq->invalid_gprmc++;
 #endif
   }
+  
+  pq->interface.pos.time = 
+    to_sec_since_2000(pq->interface.year, 
+    pq->interface.month, 
+    pq->interface.day,
+    pq->interface.hour, 
+    pq->interface.minute, 
+    pq->interface.second);
+  
   return 1;
 }
 
@@ -329,7 +356,7 @@ $GPGGA,hhmmss.ss,llll.ll,a,yyyyy.yy,a,x,xx,x.x,x.x,M,x.x,M,x.x,xxxx*hh
 uint8_t pq_ParseGPGGA(pq_t *pq)
 {
   gps_float_t time;
-  uint32_t int_time;
+  //uint32_t int_time;
   uint32_t gps_quality;
   uint32_t sat_cnt;
   gps_float_t dilution;
@@ -341,11 +368,13 @@ uint8_t pq_ParseGPGGA(pq_t *pq)
   
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetFloat(pq, &time) == 0 ) return 0;
+  /*
   int_time = time;
   pq->interface.hour = int_time / 10000;
   pq->interface.minute = ((uint32_t)(int_time / 100)) % 100;
   pq->interface.second = ((uint32_t)int_time) % 100;
-  pq->interface.millisecond = 0;	/* not used */
+  pq->interface.millisecond = 0;	
+  */
   
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetLonLatFloat(pq, &(pq->interface.pos.latitude)) == 0 ) return 0;
@@ -367,6 +396,7 @@ uint8_t pq_ParseGPGGA(pq_t *pq)
   if ( pq_GetFloat(pq, &dilution) == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetFloat(pq, &altitude) == 0 ) return 0;
+  pq->interface.pos.altitude = altitude;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_CheckTwoChars(pq, &is_west, 'M', 'm') == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;

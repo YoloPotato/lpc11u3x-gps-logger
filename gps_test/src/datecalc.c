@@ -291,3 +291,9 @@ void from_time(uint32_t t, uint16_t *cdn, uint8_t *h, uint8_t *m, uint8_t *s)
   *cdn = t;
 }
 
+uint32_t to_sec_since_2000(uint16_t y, uint8_t mo, uint8_t d, uint8_t h, uint8_t mi, uint8_t s)
+{
+  uint16_t ydn = get_year_day_number(y, mo, d);
+  uint16_t cdn = to_century_day_number(y, ydn);
+  return to_time(cdn, h, mi, s);
+}

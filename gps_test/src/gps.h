@@ -26,6 +26,8 @@ struct _gps_pos_struct
 {
   gps_float_t latitude;
   gps_float_t longitude;
+  gps_float_t altitude;
+  uint32_t	time;		/* seconds since 1.1.2000 */
 };
 typedef struct _gps_pos_struct gps_pos_t;
 
