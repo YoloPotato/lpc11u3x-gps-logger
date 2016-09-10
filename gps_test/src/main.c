@@ -279,11 +279,11 @@ int __attribute__ ((noinline)) main(void)
     {
       is_output_time = 0;
       display_Write("UTC ");
-      display_WriteUnsigned(pq.interface.hour);
+      display_WriteUnsigned(pq.interface.pos.hour);
       display_Write(":");
-      display_WriteUnsigned(pq.interface.minute);
+      display_WriteUnsigned(pq.interface.pos.minute);
       display_Write(":");
-      display_WriteUnsigned(pq.interface.second);
+      display_WriteUnsigned(pq.interface.pos.second);
       display_Write("\n");
       
       display_Write("Sec ");
@@ -295,11 +295,11 @@ int __attribute__ ((noinline)) main(void)
     {
       is_output_date = 0;
       display_Write("Date ");
-      display_WriteUnsigned(pq.interface.day);
+      display_WriteUnsigned(pq.interface.pos.day);
       display_Write(".");
-      display_WriteUnsigned(pq.interface.month);
+      display_WriteUnsigned(pq.interface.pos.month);
       display_Write(".");
-      display_WriteUnsigned(pq.interface.year);
+      display_WriteUnsigned(pq.interface.pos.year);
       display_Write("\n");
     }
     

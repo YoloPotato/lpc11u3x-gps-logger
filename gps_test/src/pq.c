@@ -274,6 +274,12 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
   if ( pq_GetFloat(pq, &time) == 0 ) return 0;
 
   int_time = time;
+  
+  
+  pq->interface.pos.hour = int_time / 10000;
+  pq->interface.pos.minute = ((uint32_t)(int_time / 100)) % 100;
+  pq->interface.pos.second = ((uint32_t)int_time) % 100;
+  
   pq->interface.hour = int_time / 10000;
   pq->interface.minute = ((uint32_t)(int_time / 100)) % 100;
   pq->interface.second = ((uint32_t)int_time) % 100;
@@ -298,10 +304,18 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
   if ( pq_GetFloat(pq, &(pq->interface.true_course)) == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetNum(pq, &date, NULL) == 0 ) return 0;  
+
+  pq->interface.pos.year = date % 100UL;			
+  pq->interface.pos.month = (date / 100UL) % 100UL;
+  pq->interface.pos.day = (date / 10000UL) ;
   
-  pq->interface.year = date % 100UL;
+  pq->interface.pos.is_pos_and_time_update = 1;
+
+  pq->interface.year = date % 100UL + 2000;
   pq->interface.month = (date / 100UL) % 100UL;
   pq->interface.day = (date / 10000UL) ;
+  
+
   
   
   if ( pq_CheckComma(pq) == 0 ) return 0;
@@ -392,11 +406,13 @@ uint8_t pq_ParseGPGGA(pq_t *pq)
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetNum(pq, &sat_cnt, NULL) == 0 ) return 0;  
   pq->sat_cnt = sat_cnt;
+  pq->interface.pos.sat =sat_cnt;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetFloat(pq, &dilution) == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_GetFloat(pq, &altitude) == 0 ) return 0;
   pq->interface.pos.altitude = altitude;
+  pq->interface.pos.is_altitude_update = 1;
   if ( pq_CheckComma(pq) == 0 ) return 0;
   if ( pq_CheckTwoChars(pq, &is_west, 'M', 'm') == 0 ) return 0;
   if ( pq_CheckComma(pq) == 0 ) return 0;

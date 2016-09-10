@@ -8,6 +8,9 @@ https://en.wikipedia.org/wiki/GPS_Exchange_Format
 http://www.topografix.com/GPX/1/1/
 
 http://www.w3schools.com/xml/schema_dtypes_date.asp
+2002-05-30T09:30:10Z
+
+T separates date and time, Z indicates UTC
 
 
 
@@ -76,6 +79,8 @@ const char gpx_tag_close[] = ">\n";
 const char gpx_trkpt_end[] = "   </trkpt>\n";
 const char gpx_ele_start[] = "<ele>";
 const char gpx_ele_end[] = "</ele>";
+const char gpx_time_start[] = "<time>";
+const char gpx_time_end[] = "</time>";
 
 
 void gpx_log(const char *msg, FRESULT fr)
@@ -223,6 +228,20 @@ int gpx_write_gps_float(gps_float_t f)
   return gpx_write_str(s, "float");  
 }
 
+int gpx_write_num2(uint8_t v)
+{
+  char s[4];
+  gps_ltoa(s, v, 2);
+  return gpx_write_str(s, "num2");  
+}
+
+int gpx_write_num4(uint16_t v)
+{
+  char s[6];
+  gps_ltoa(s, v, 4);
+  return gpx_write_str(s, "num4");  
+}
+
 int gpx_write_gps_float_with_quote(gps_float_t f)
 {
   if ( gpx_write_str(gpx_quote, gpx_quote) != 0 )
@@ -271,6 +290,55 @@ int gps_write_track_altitude(gps_pos_t *pos)
   return 0;
 }
 
+/* 2002-05-30T09:30:10Z */
+int gps_write_track_time(gps_pos_t *pos)
+{
+  if ( gpx_write_str(gpx_time_start, "tm start") != 0 )
+  {
+    if ( gpx_write_num4((uint16_t)pos->year+2000) != 0 )
+    {
+      if ( gpx_write_str("-", "-") != 0 )
+      {
+	if ( gpx_write_num2(pos->month) != 0 )
+	{
+	  if ( gpx_write_str("-", "-") != 0 )
+	  {
+	    if ( gpx_write_num2(pos->day) != 0 )
+	    {
+	      if ( gpx_write_str("T", "T") != 0 )
+	      {
+		if ( gpx_write_num2(pos->hour) != 0 )
+		{
+		  if ( gpx_write_str(":", ":") != 0 )
+		  {
+		    if ( gpx_write_num2(pos->minute) != 0 )
+		    {
+		      if ( gpx_write_str(":", ":") != 0 )
+		      {
+			if ( gpx_write_num2(pos->second) != 0 )
+			{
+			  if ( gpx_write_str("Z", "Z") != 0 )
+			  {    
+			    if ( gpx_write_str(gpx_time_end, "tm end") != 0 )
+			    {
+			      return 1;
+			    }
+			  }
+			}
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }	
+    }
+  }
+  return 0;
+}
+
 int gpx_write_track_point(gps_pos_t *pos)
 {
   if ( gpx_write_track_point_start() != 0 )
@@ -279,12 +347,15 @@ int gpx_write_track_point(gps_pos_t *pos)
     {
       if ( gpx_write_str(gpx_tag_close, ">") != 0 )
       {
-	/* ... */
-	
-	
-	if ( gpx_write_track_point_end() != 0 )
+	if ( gps_write_track_altitude(pos) != 0 )
 	{
-	  return 1;
+	  if ( gps_write_track_time(pos) != 0 )
+	  {
+	    if ( gpx_write_track_point_end() != 0 )
+	    {
+	      return 1;
+	    }
+	  }
 	}
       }
     }

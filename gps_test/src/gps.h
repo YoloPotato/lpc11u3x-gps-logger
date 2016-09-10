@@ -28,6 +28,15 @@ struct _gps_pos_struct
   gps_float_t longitude;
   gps_float_t altitude;
   uint32_t	time;		/* seconds since 1.1.2000 */
+  uint8_t year;			/* since 2000 */
+  uint8_t month;
+  uint8_t day;
+  uint8_t hour;
+  uint8_t minute;
+  uint8_t second;
+  uint8_t sat;
+  volatile uint8_t is_altitude_update;	/* set to 1 if the altitude and sat was updated */
+  volatile uint8_t is_pos_and_time_update; 
 };
 typedef struct _gps_pos_struct gps_pos_t;
 
