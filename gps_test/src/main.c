@@ -11,19 +11,17 @@
 #include <chip.h>
 #include "delay.h"
 #include "u8g2.h"
-#include "ff.h"		/* Declarations of FatFs API */
 #include "eeprom.h"
 #include "display.h"
 #include "gpx.h"
+#include "pq.h"
 
 
 
 
 /*=======================================================================*/
 
-//FATFS FatFs;		/* FatFs work area needed for each volume */
-//FIL Fil;			/* File object needed for each open file */
-
+pq_t pq;
 
 /*=======================================================================*/
 /* system procedures and sys tick master task */
@@ -34,8 +32,8 @@
 volatile uint32_t sys_tick_irq_cnt=0;
 volatile uint32_t uart_irq_cnt=0;
 volatile uint32_t uart_data_cnt=0;
-volatile uint8_t uart_data;
 
+volatile uint8_t is_output_last_unknown_msg = 0;
 volatile uint8_t is_output_uart_data_cnt = 0;
 
 void __attribute__ ((interrupt)) SysTick_Handler(void)
@@ -43,13 +41,18 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
   sys_tick_irq_cnt++;
   if ( (sys_tick_irq_cnt & 0x03f) == 0 )
     is_output_uart_data_cnt = 1;
+    
+  if ( (sys_tick_irq_cnt & 0x03f) == 15 )
+    is_output_last_unknown_msg = 1;  
 }
 
 
 void __attribute__ ((interrupt, used)) UART_IRQ(void)
-{
+{  
   /* Read the IIR register. This is required. If not read the itq will not be cleared */
   uint32_t iir = Chip_UART_ReadIntIDReg(LPC_USART);
+  uint8_t uart_data;
+  
   if ( (iir & 1) == 0 )
   {
     /* count the number of interrupts */
@@ -60,6 +63,7 @@ void __attribute__ ((interrupt, used)) UART_IRQ(void)
       uart_data_cnt++;
       /* read the byte from the FIFO Buffer */
       uart_data = Chip_UART_ReadByte(LPC_USART);
+      pq_AddChar(&pq, uart_data);
     }
   }
 }
@@ -128,6 +132,9 @@ int __attribute__ ((noinline)) main(void)
   /* configure LED for the eHaJo board */
   Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
   
+  /* position parser init */
+  pq_Init(&pq);
+  
   /* setup UART for GPS */
   display_Write("UART Init\n");
   
@@ -176,15 +183,25 @@ int __attribute__ ((noinline)) main(void)
   {
     Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
     delay_micro_seconds(100UL*1000UL);
+    pq_ParseSentence(&pq);
     
     Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
     delay_micro_seconds(100UL*1000UL);
+    pq_ParseSentence(&pq);
 
     if ( is_output_uart_data_cnt )
     {
       is_output_uart_data_cnt = 0;
       display_Write("UART: ");
       display_WriteUnsigned(uart_data_cnt);
+      display_Write("\n");
+    }
+    
+    if ( is_output_last_unknown_msg )
+    {
+      is_output_last_unknown_msg = 0;
+      display_Write("? ");
+      display_Write(pq.last_unknown_msg);
       display_Write("\n");
     }
     
