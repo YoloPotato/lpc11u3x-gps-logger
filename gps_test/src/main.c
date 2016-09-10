@@ -36,9 +36,13 @@ volatile uint32_t uart_irq_cnt=0;
 volatile uint32_t uart_data_cnt=0;
 volatile uint8_t uart_data;
 
+volatile uint8_t is_output_uart_data_cnt = 0;
+
 void __attribute__ ((interrupt)) SysTick_Handler(void)
 {
   sys_tick_irq_cnt++;
+  if ( (sys_tick_irq_cnt & 0x03f) == 0 )
+    is_output_uart_data_cnt = 1;
 }
 
 
@@ -201,15 +205,18 @@ int __attribute__ ((noinline)) main(void)
   for(;;)
   {
     Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
-    delay_micro_seconds(500UL*1000UL);
+    delay_micro_seconds(100UL*1000UL);
     
     Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
-    delay_micro_seconds(500UL*1000UL);
+    delay_micro_seconds(100UL*1000UL);
 
-    display_Write("IRQs: ");
-    display_WriteUnsigned(uart_irq_cnt);
-    display_Write("\n");
-    
+    if ( is_output_uart_data_cnt )
+    {
+      is_output_uart_data_cnt = 0;
+      display_Write("UART RX: ");
+      display_WriteUnsigned(uart_data_cnt);
+      display_Write("\n");
+    }
     
   }
   

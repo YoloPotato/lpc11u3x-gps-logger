@@ -514,7 +514,7 @@ void pq_SetSignPrefix(uint8_t is_lat, uint8_t is_neg, char *s)
   uint16_t pos_fraction;	0...999 
   uint16_t pos_degree;	temp variable for gps_float_t conversion 
   into a string
-  N ddd° mm.fff'   --> 14 chars, 15 with '\0'  
+  N ddd mm.fff'   --> 14 chars, 15 with '\0'  
 */
 void pq_DegreeMinutesToStr(pq_t *pq, uint8_t is_lat, char *s)
 {
