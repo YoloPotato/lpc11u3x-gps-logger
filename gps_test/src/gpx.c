@@ -75,12 +75,40 @@ const char gpx_trkpt_start[] = "   <trkpt";
 const char gpx_lat_pre[] = " lat=";
 const char gpx_lon_pre[] = " lon=";
 const char gpx_quote[] = "\"";
-const char gpx_tag_close[] = ">\n";
-const char gpx_trkpt_end[] = "   </trkpt>\n";
+const char gpx_tag_close[] = ">";
+const char gpx_trkpt_end[] = "</trkpt>\n";
 const char gpx_ele_start[] = "<ele>";
 const char gpx_ele_end[] = "</ele>";
 const char gpx_time_start[] = "<time>";
 const char gpx_time_end[] = "</time>";
+const char gpx_sat_start[] = "<sat>";
+const char gpx_sat_end[] = "</sat>";
+
+
+/* FatFS error messages */
+const char *fr_to_str[] = 
+{
+	"OK",				/* (0) Succeeded */
+	"DISK_ERR",			/* (1) A hard error occurred in the low level disk I/O layer */
+	"INT_ERR",				/* (2) Assertion failed */
+	"NOT_READY",			/* (3) The physical drive cannot work */
+	"NO_FILE",				/* (4) Could not find the file */
+	"NO_PATH",				/* (5) Could not find the path */
+	"INVALID_NAME",		/* (6) The path name format is invalid */
+	"DENIED",				/* (7) Access denied due to prohibited access or directory full */
+	"EXIST",				/* (8) Access denied due to prohibited access */
+	"INVALID_OBJECT",		/* (9) The file/directory object is invalid */
+	"WRITE_PROTECTED",		/* (10) The physical drive is write protected */
+	"INVALID_DRIVE",		/* (11) The logical drive number is invalid */
+	"NOT_ENABLED",			/* (12) The volume has no work area */
+	"NO_FILESYSTEM",		/* (13) There is no valid FAT volume */
+	"MKFS_ABORTED",		/* (14) The f_mkfs() aborted due to any problem */
+	"TIMEOUT",				/* (15) Could not get a grant to access the volume within defined period */
+	"LOCKED",				/* (16) The operation is rejected according to the file sharing policy */
+	"NOT_ENOUGH_CORE",		/* (17) LFN working buffer could not be allocated */
+	"TOO_MANY_FILES",	/* (18) Number of open files > _FS_LOCK */
+	"INVALID_PARA"	/* (19) Given parameter is invalid */
+};
 
 
 void gpx_log(const char *msg, FRESULT fr)
@@ -103,6 +131,21 @@ void gpx_unmount(void)
 {
   f_mount(NULL, "", 0);
 }
+
+
+const char *gpx_get_sd_card_label(void)
+{
+  static char buf[24];
+  
+  if ( gpx_mount() != 0 )
+  {
+    f_getlabel("", buf, NULL);
+    gpx_unmount();
+    return buf;
+  }
+  return "<SD failed>";
+}
+
 
 /* 1 for ok, 0, for does not exist, -1 for error */
 int gpx_is_available(void)
@@ -290,6 +333,21 @@ int gps_write_track_altitude(gps_pos_t *pos)
   return 0;
 }
 
+int gps_write_track_sat(gps_pos_t *pos)
+{
+  if ( gpx_write_str(gpx_sat_start, "sat start") != 0 )
+  {
+    if ( gpx_write_num2(pos->sat) != 0 )
+    {
+      if ( gpx_write_str(gpx_sat_end, "sat end") != 0 )
+      {
+	return 1;
+      }  
+    }
+  }  
+  return 0;
+}
+
 /* 2002-05-30T09:30:10Z */
 int gps_write_track_time(gps_pos_t *pos)
 {
@@ -349,11 +407,14 @@ int gpx_write_track_point(gps_pos_t *pos)
       {
 	if ( gps_write_track_altitude(pos) != 0 )
 	{
-	  if ( gps_write_track_time(pos) != 0 )
+	  if ( gps_write_track_sat(pos) != 0 )
 	  {
-	    if ( gpx_write_track_point_end() != 0 )
+	    if ( gps_write_track_time(pos) != 0 )
 	    {
-	      return 1;
+	      if ( gpx_write_track_point_end() != 0 )
+	      {
+		return 1;
+	      }
 	    }
 	  }
 	}
