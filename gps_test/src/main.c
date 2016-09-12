@@ -21,12 +21,22 @@
 #define SYS_TICK_PERIOD_IN_MS 100
 
 #define GPS_BAUD 9600
-#define TRACKPOINT_SAVE_PERIOD_SECONDS 5
 
 /* 1 measure per 10 sec */
+//const char gps_set_rate_cmd[] = 
+//"\xB5\x62\x06\x08\x06\x00\x10\x27\x01\x00\x01\x00\x4D\xDD\xB5\x62\x06\x08\x00\x00\x0E\x30";
+
+/* 1 measure per 3 sec */
 const char gps_set_rate_cmd[] = 
-"\xB5\x62\x06\x08\x06\x00\x10\x27\x01\x00\x01\x00\x4D\xDD\xB5\x62\x06\x08\x00\x00\x0E\x30";
-const uint32_t gps_set_rate_tick_delay = 10;
+"\xB5\x62\x06\x08\x06\x00\xB8\x0B\x01\x00\x01\x00\xD9\x41\xB5\x62\x06\x08\x00\x00\x0E\x30";
+
+/* when to send the gps_set_rate cmd: After 2 seconds (20 ticks) */
+const uint32_t gps_set_rate_tick_delay = 20;
+
+/* when to save the trackpoint */
+/* if this is slower than the measures per seconds, then nothing will be saved */
+/* until new GPS pos is available */
+#define TRACKPOINT_SAVE_PERIOD_SECONDS 5
 
 /*=======================================================================*/
 
