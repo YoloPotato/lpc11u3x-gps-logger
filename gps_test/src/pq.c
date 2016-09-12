@@ -325,7 +325,7 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
   if ( is_west != 0 ) pq->interface.pos.longitude = -pq->interface.pos.longitude;
   if ( is_valid != 0 )
   {
-    pq_AddInterfaceValuesToQueue(pq);
+    //pq_AddInterfaceValuesToQueue(pq);
 #ifdef PH_ERR_STATISTICS
     pq->valid_gprmc++;
 #endif
@@ -422,7 +422,7 @@ uint8_t pq_ParseGPGGA(pq_t *pq)
   
   if ( gps_quality != 0 )
   {
-    pq_AddInterfaceValuesToQueue(pq);
+    //pq_AddInterfaceValuesToQueue(pq);
 #ifdef PH_ERR_STATISTICS
     pq->valid_gpgga++;
 #endif

@@ -18,9 +18,15 @@
 
 /*=======================================================================*/
 /* Configuration */
+#define SYS_TICK_PERIOD_IN_MS 100
+
 #define GPS_BAUD 9600
 #define TRACKPOINT_SAVE_PERIOD_SECONDS 5
 
+/* 1 measure per 10 sec */
+const char gps_set_rate_cmd[] = 
+"\xB5\x62\x06\x08\x06\x00\x10\x27\x01\x00\x01\x00\x4D\xDD\xB5\x62\x06\x08\x00\x00\x0E\x30";
+const uint32_t gps_set_rate_tick_delay = 10;
 
 /*=======================================================================*/
 
@@ -29,13 +35,14 @@ pq_t pq;
 /*=======================================================================*/
 /* system procedures and sys tick master task */
 
-#define SYS_TICK_PERIOD_IN_MS 100
 
 
 volatile uint32_t sys_tick_irq_cnt=0;
 volatile uint32_t uart_irq_cnt=0;
 volatile uint32_t uart_data_cnt=0;
 volatile uint32_t trackpoint_save_cnt = TRACKPOINT_SAVE_PERIOD_SECONDS*1000/SYS_TICK_PERIOD_IN_MS;
+volatile uint8_t is_send_gps_rate = 0;
+
 
 volatile uint8_t is_output_last_unknown_msg = 0;
 volatile uint8_t is_output_uart_data_cnt = 0;
@@ -45,12 +52,31 @@ volatile uint8_t is_output_altitude = 0;
 volatile uint8_t is_output_pos = 0;
 volatile uint8_t is_output_time = 0;
 volatile uint8_t is_output_date = 0;
+volatile uint8_t is_output_digit_cnt = 0;
+volatile uint8_t is_output_gprmc_per_second = 0;
+
 volatile uint8_t is_trackpoint_save = 0;
+volatile uint8_t is_sd_write_success = 0;
+
+
+void set_led_status(uint8_t status)
+{
+  if ( status )
+    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
+  else
+    Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);
+}
 
 void __attribute__ ((interrupt)) SysTick_Handler(void)
 {
-  sys_tick_irq_cnt++;
+  if ( sys_tick_irq_cnt == gps_set_rate_tick_delay )
+  {
+    is_send_gps_rate = 1;
+  }
   
+  sys_tick_irq_cnt++;
+
+  /* time is over, let us save the trackpoint */
   if ( trackpoint_save_cnt > 0 )
   {
     trackpoint_save_cnt--;
@@ -59,6 +85,17 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
   {
     is_trackpoint_save = 1;
     trackpoint_save_cnt = TRACKPOINT_SAVE_PERIOD_SECONDS*1000/SYS_TICK_PERIOD_IN_MS;
+  }
+  
+  /* flash with LED for a successful write */
+  if ( is_sd_write_success > 0 )
+  {
+    set_led_status(1);
+    is_sd_write_success = 0;
+  }
+  else
+  {
+    set_led_status(0);
   }
     
   
@@ -87,6 +124,14 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
  
   if ( (sys_tick_irq_cnt & 0x0ff) == 0x06f )
     is_output_date = 1;
+  
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x07f )
+    is_output_digit_cnt = 1;
+
+  if ( (sys_tick_irq_cnt & 0x0ff) == 0x08f )
+    is_output_gprmc_per_second = 1;
+
+    
   
 }
 
@@ -186,15 +231,8 @@ int __attribute__ ((noinline)) main(void)
 
   for(;;)
   {
-    
-    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
-    delay_micro_seconds(100UL*1000UL);
     pq_ParseSentence(&pq);
     
-    Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
-    delay_micro_seconds(100UL*1000UL);
-    pq_ParseSentence(&pq);
-
     if ( is_trackpoint_save != 0 )
     {
       is_trackpoint_save = 0;
@@ -210,11 +248,18 @@ int __attribute__ ((noinline)) main(void)
 	}
 	pq.interface.pos.is_altitude_update = 0;
 	pq.interface.pos.is_pos_and_time_update = 0;
+	is_sd_write_success = 1;
       }
       else
       {
 	display_Write("GPS not avail.\n");	
       }
+    }
+    
+    if ( is_send_gps_rate )
+    {
+      is_send_gps_rate  = 0;
+      Chip_UART_SendBlocking(LPC_USART, gps_set_rate_cmd, sizeof(gps_set_rate_cmd));
     }
     
 
@@ -303,6 +348,31 @@ int __attribute__ ((noinline)) main(void)
       display_WriteUnsigned(pq.interface.pos.year);
       display_Write("\n");
     }
+    
+    if ( is_output_digit_cnt )
+    {
+      is_output_digit_cnt = 0;
+      display_Write("LatLonFrac  ");
+      display_WriteUnsigned(pq.digit_cnt);
+      display_Write("\n");
+    }
+    
+    if ( is_output_gprmc_per_second )
+    {
+      is_output_gprmc_per_second = 0;
+      display_Write("RMC ");
+      display_WriteUnsigned(pq.valid_gprmc);
+      display_Write("\n");
+      
+      display_Write("RMC/S ");
+      display_WriteGpsFloat(((pq.valid_gprmc*(1000/SYS_TICK_PERIOD_IN_MS)*100)/sys_tick_irq_cnt)/100.0);
+      display_Write("\n");
+    }
+
+    
+
+
+    
     
   }
   
