@@ -121,7 +121,7 @@ int16_t crb_GetCurr(crb_t *crb)
 int16_t crb_GetNext(crb_t *crb)
 {
   crb->curr_pos++;
-  if ( crb->curr_pos > CRB_LEN )
+  if ( crb->curr_pos >= CRB_LEN )
     crb->curr_pos = 0;
   return crb->buf[crb->curr_pos];
 }

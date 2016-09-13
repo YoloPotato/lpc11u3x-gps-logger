@@ -14,13 +14,17 @@
   these are about 7 (6.9) decimal digits.
   for -180 to 180, 4 digits remain for the decimal fraction
   this is a resolution of about 10m
+  
+  GPS_MODF stores the integral part in f and returns the fractional part  
 */
-typedef float gps_float_t;
 
-/* GPS_MODF stores the integral part in f and returns the fractional part */
-#define GPS_MODF(x,f)	modff((x),(f))
-#define GPS_FLOAT_MAX	FLT_MAX
+//typedef float gps_float_t;
+//#define GPS_MODF(x,f)	modff((x),(f))
+//#define GPS_FLOAT_MAX	FLT_MAX
 
+typedef double gps_float_t;
+#define GPS_MODF(x,f)	modf((x),(f))
+#define GPS_FLOAT_MAX	DBL_MAX
 
 struct _gps_pos_struct
 {

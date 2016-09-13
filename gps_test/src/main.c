@@ -342,9 +342,9 @@ int __attribute__ ((noinline)) main(void)
       display_WriteUnsigned(pq.interface.pos.second);
       display_Write("\n");
       
-      display_Write("Sec ");
-      display_WriteUnsigned(pq.interface.pos.time);
-      display_Write("\n");
+      //display_Write("Sec ");
+      //display_WriteUnsigned(pq.interface.pos.time);
+      //display_Write("\n");
     }
 
     if ( is_output_date )
@@ -374,8 +374,8 @@ int __attribute__ ((noinline)) main(void)
       display_WriteUnsigned(pq.valid_gprmc);
       display_Write("\n");
       
-      display_Write("RMC/S ");
-      display_WriteGpsFloat(((pq.valid_gprmc*(1000/SYS_TICK_PERIOD_IN_MS)*100)/sys_tick_irq_cnt)/100.0);
+      display_Write("RMC/100S ");
+      display_WriteUnsigned(((pq.valid_gprmc*(1000/SYS_TICK_PERIOD_IN_MS)*100)/sys_tick_irq_cnt));
       display_Write("\n");
     }
 

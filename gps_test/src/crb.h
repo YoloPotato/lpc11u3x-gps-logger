@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 
-#define CRB_LEN 256
+#define CRB_LEN (256*4)
 
 struct _crb_stuct
 {
@@ -23,7 +23,7 @@ struct _crb_stuct
   volatile uint8_t is_wait_for_dollar;	/* only updated by crb_AddChar() */
   uint8_t buf[CRB_LEN];
 
-  uint8_t curr_pos;
+  uint16_t curr_pos;
 };
 typedef struct _crb_stuct crb_t;
 

@@ -18,6 +18,7 @@
 
 #define PH_ERR_STATISTICS
 
+#ifdef OLD
 struct _pq_entry_struct
 {
   gps_pos_t pos;
@@ -25,6 +26,7 @@ struct _pq_entry_struct
   //uint16_t millisecond;	/* milliseconds of the timestamp */
 };
 typedef struct _pq_entry_struct pq_entry_t;
+#endif
 
 struct _pq_interface_struct
 {
@@ -62,7 +64,7 @@ struct _pq_struct
 #endif
   uint8_t gps_quality;	/* GPS quality from GPGGA record */
   uint8_t sat_cnt;	/* satellites in use (GPGGA record) */
-  uint8_t cnt;		/* entries in the queue */	
+  //uint8_t cnt;		/* entries in the queue */	
   uint8_t digit_cnt;	/* number of fraction digits of lon/lat from the gps receiver */
 
   uint8_t pos_is_neg;	/* temp variable for gps_float_t conversion */
@@ -71,16 +73,16 @@ struct _pq_struct
   uint16_t pos_fraction;	/* 0...999 */
   uint16_t pos_degree;	/* temp variable for gps_float_t conversion */
   
-  pq_entry_t queue[PQ_LEN];
+  //pq_entry_t queue[PQ_LEN];
   char last_unknown_msg[8];
 };
 typedef struct _pq_struct pq_t;
 
 void pq_Init(pq_t *pq);
 void pq_AddChar(pq_t *pq, uint8_t c);
-void pq_DeleteFirst(pq_t *pq);
-void pq_AddInterfaceValuesToQueue(pq_t *pq);
-pq_entry_t *pq_GetLatestEntry(pq_t *pq);
+//void pq_DeleteFirst(pq_t *pq);
+//void pq_AddInterfaceValuesToQueue(pq_t *pq);
+//pq_entry_t *pq_GetLatestEntry(pq_t *pq);
 void pq_ResetParser(pq_t *pq);
 int16_t pq_GetCurr(pq_t *pq);
 int16_t pq_GetNext(pq_t *pq);

@@ -30,34 +30,6 @@ void pq_AddStr(pq_t *pq, const char *str)
   crb_AddStr(&(pq->crb), str);  
 }
 
-void pq_DeleteFirst(pq_t *pq)
-{
-  uint8_t i;
-  if ( pq->cnt > 0 )
-  {
-    for( i = 1; i < pq->cnt; i++ )
-    {
-      pq->queue[i-1] = pq->queue[i];
-    }
-    pq->cnt--;
-  }
-}
-
-/* add values from the interface to the queue record */
-void pq_AddInterfaceValuesToQueue(pq_t *pq)
-{
-  if ( pq->cnt >= PQ_LEN )
-    pq_DeleteFirst(pq);
-  pq->queue[pq->cnt].pos = pq->interface.pos;
-  pq->cnt++;
-}
-
-pq_entry_t *pq_GetLatestEntry(pq_t *pq)
-{
-  if ( pq->cnt == 0 )
-    return NULL;
-  return &(pq->queue[pq->cnt-1]);
-}
 
 
 /*===========================================*/
@@ -325,7 +297,6 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
   if ( is_west != 0 ) pq->interface.pos.longitude = -pq->interface.pos.longitude;
   if ( is_valid != 0 )
   {
-    //pq_AddInterfaceValuesToQueue(pq);
 #ifdef PH_ERR_STATISTICS
     pq->valid_gprmc++;
 #endif
@@ -422,7 +393,6 @@ uint8_t pq_ParseGPGGA(pq_t *pq)
   
   if ( gps_quality != 0 )
   {
-    //pq_AddInterfaceValuesToQueue(pq);
 #ifdef PH_ERR_STATISTICS
     pq->valid_gpgga++;
 #endif
