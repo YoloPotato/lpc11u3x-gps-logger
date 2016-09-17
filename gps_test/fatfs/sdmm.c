@@ -39,33 +39,47 @@
 
 /* Initialize port for MMC DO as input */
 #define DO_INIT()	\
-      Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 15, IOCON_FUNC0|IOCON_DIGMODE_EN|IOCON_MODE_PULLUP); /* probably pullup is not required */ \
-      Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 15)
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 23, IOCON_FUNC0|IOCON_DIGMODE_EN|IOCON_MODE_PULLUP); /* probably pullup is not required */ \
+      Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 23)
 /* Test for MMC DO ('H':true, 'L':false) */
 #define DO			\
-  Chip_GPIO_GetPinState(LPC_GPIO, 1, 15)
+  Chip_GPIO_GetPinState(LPC_GPIO, 0, 23)
 
 /* Initialize port for MMC DI as output */
 #define DI_INIT()	\
-      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 23, IOCON_FUNC0|IOCON_DIGMODE_EN);	\
-      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 23)      
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 16, IOCON_FUNC0|IOCON_DIGMODE_EN);	\
+      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 16)      
 /* Set MMC DI "high" */
 #define DI_H()		\
-	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 23)
+	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 16)
 /* Set MMC DI "low" */
 #define DI_L()		\
-	Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 23)
+	Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 16)
 
 /* Initialize port for MMC SCLK as output */
 #define CK_INIT()	\
-      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 16, IOCON_FUNC0|IOCON_DIGMODE_EN);	\
-      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 16)     
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 15, IOCON_FUNC0|IOCON_DIGMODE_EN);	\
+      Chip_GPIO_SetPinDIROutput(LPC_GPIO, 1, 15)     
+      
+
+/* use procedure calls to slow down clock speed otherwise 48MHz are too fast */
+void clk_high(void) __attribute__ (( noinline ));
+void clk_high(void)
+{
+	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 1, 15); __DSB();	/* __DSB is required, but not sure why. Is it the delay or the data sync??? */
+}
+
+void clk_low(void) __attribute__ (( noinline ));
+void clk_low(void)
+{
+	Chip_GPIO_SetPinOutLow(LPC_GPIO, 1, 15); __DSB();
+}
 /* Set MMC SCLK "high" */
 #define CK_H()		\
-	Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 16); __DSB()	/* __DSB is required, but not sure why. Is it the delay or the data sync??? */
+  clk_high()
 /* Set MMC SCLK "low" */
 #define	CK_L()	\
-	Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 16); __DSB()
+  clk_low()
 
 /* Initialize port for MMC CS as output */
 #define CS_INIT()	\

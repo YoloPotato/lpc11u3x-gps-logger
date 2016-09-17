@@ -461,7 +461,7 @@ uint8_t pq_ParseSentence(pq_t *pq)
 */
 void pq_FloatToDegreeMinutes(pq_t *pq, gps_float_t f)
 {
-  float g;
+  gps_float_t g;
   pq->pos_is_neg = 0;
   if ( f < (gps_float_t)0 )
   {
@@ -548,7 +548,7 @@ void pq_DegreeMinutesToStr(pq_t *pq, uint8_t is_lat, char *s)
 /* s must be at least 10 chars long */
 void pq_FloatToStr(gps_float_t f, uint8_t is_lat, char *s)
 {
-  float g;
+  gps_float_t g;
   uint8_t is_neg = 0;
 
     if ( f < (gps_float_t)0 )
