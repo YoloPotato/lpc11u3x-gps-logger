@@ -225,15 +225,6 @@ int __attribute__ ((noinline)) main(void)
   display_Write(" Baud\n");
   
 
-  if ( EEPROM_Test() != 0 )
-  {
-    display_Write("EEPROM ok\n");
-  }
-  else
-  {
-    display_Write("EEPROM failed\n");
-  }
-  
   display_Write("Mount:\n");
   display_Write(gpx_get_sd_card_label());
   display_Write("\n");
@@ -381,17 +372,9 @@ int __attribute__ ((noinline)) main(void)
 
     
 
-
-    
-    
-  }
-  
-  
-  /* enter sleep mode: Reduce from 1.4mA to 0.8mA with 12MHz */  
-  while (1)
-  {
-    SCB->SCR |= (1UL << SCB_SCR_SLEEPONEXIT_Pos);		/* enter sleep mode after interrupt */ 
+    //SCB->SCR |= (1UL << SCB_SCR_SLEEPONEXIT_Pos);		/* enter sleep mode after interrupt: this is NOT set, because SD writing is done in main loop */ 
     Chip_PMU_SleepState(LPC_PMU);						/* enter sleep mode now */
   }
+  
 }
 
