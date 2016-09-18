@@ -1,10 +1,34 @@
 /*
   main.c
   
-  Two function must be implemented:
-    void __attribute__ ((interrupt)) SysTick_Handler(void)
-    int __attribute__ ((noinline)) main(void)
+  LPC11U3x GPS Logger (https://github.com/olikraus/lpc11u3x-gps-logger)
+
+  Copyright (c) 2016, olikraus@gmail.com
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without modification, 
+  are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this list 
+    of conditions and the following disclaimer.
     
+  * Redistributions in binary form must reproduce the above copyright notice, this 
+    list of conditions and the following disclaimer in the documentation and/or other 
+    materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT 
+  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
     
 */
 
@@ -210,9 +234,11 @@ int __attribute__ ((noinline)) main(void)
   SysTick_Config(SystemCoreClock/1000UL*(unsigned long)SYS_TICK_PERIOD_IN_MS);
   
   /* turn on GPIO */
-  Chip_GPIO_Init(LPC_GPIO);
-  
+  Chip_GPIO_Init(LPC_GPIO);	/* Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_GPIO); */
+	
   /* turn on IOCON, UART0 and GPIO */
+  /* not required SYSCTL_CLOCK_IOCON is enabled with Chip_SystemInit, SYSCTL_CLOCK_UART0 */
+  /* is enabled later and SYSCTL_CLOCK_GPIO is already anabled with Chip_GPIO_Init() */
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON | SYSCTL_CLOCK_UART0 | SYSCTL_CLOCK_GPIO);
   
   
@@ -232,7 +258,7 @@ int __attribute__ ((noinline)) main(void)
   Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 18, IOCON_FUNC1);	/* RxD */
   Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 19, IOCON_FUNC1);	/* TxD */
   
-  Chip_UART_Init(LPC_USART);
+  Chip_UART_Init(LPC_USART);			/* enable SYSCTL_CLOCK_UART0 */
   Chip_UART_DisableDivisorAccess(LPC_USART);			/* divisor access must be disabled for IRQ setup, but this is already done in init */
   Chip_UART_IntEnable(LPC_USART, UART_IER_RBRINT);	/* enable receive interrupt */
   NVIC_EnableIRQ(UART0_IRQn);
