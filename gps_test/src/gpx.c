@@ -133,7 +133,7 @@ void gpx_unmount(void)
 }
 
 
-const char *gpx_get_sd_card_label(void)
+const char *gpx_get_sd_card_label(uint8_t *is_error)
 {
   static char buf[24];
   
@@ -141,8 +141,12 @@ const char *gpx_get_sd_card_label(void)
   {
     f_getlabel("", buf, NULL);
     gpx_unmount();
+    if ( is_error != NULL )
+      *is_error = 0;
     return buf;
   }
+  if ( is_error != NULL )
+    *is_error = 1;
   return "<SD failed>";
 }
 

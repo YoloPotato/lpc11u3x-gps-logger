@@ -216,7 +216,7 @@ $GPRMC,220516,A,5133.82,N,00042.24,W,173.8,231.8,130694,004.2,W*70
 
       1   220516     Time Stamp (UTC) in format HHMMSS 
       2   A          validity - A-ok, V-invalid
-      3   5133.82    current Latitude
+      3   5133.82    current Latitude, XXYY.ZZZZ => XX°YY'(0.ZZZZ * 60)" => XX° + (YY.ZZZZ / 60)°
       4   N          North/South
       5   00042.24   current Longitude
       6   W          East/West

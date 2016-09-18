@@ -36,7 +36,18 @@ const uint32_t gps_set_rate_tick_delay = 20;
 /* when to save the trackpoint */
 /* if this is slower than the measures per seconds, then nothing will be saved */
 /* until new GPS pos is available */
-#define TRACKPOINT_SAVE_PERIOD_SECONDS 5
+#define TRACKPOINT_SAVE_PERIOD_SECONDS 4
+
+
+/* four short blinks for SD write error 0x055*/
+#define BLINK_SD_ERROR 0x055
+/* one short blink for write ok */
+#define BLINK_SD_WRITE_OK 0x0001
+/* one long blinck for no gps */
+#define BLINK_NO_GPS 0x000f
+/* No UART data: long, 2x short,  long, 2x short, long */
+#define BLINK_NO_UART_DATA 0x75757
+
 
 /*=======================================================================*/
 
@@ -66,7 +77,8 @@ volatile uint8_t is_output_digit_cnt = 0;
 volatile uint8_t is_output_gprmc_per_second = 0;
 
 volatile uint8_t is_trackpoint_save = 0;
-volatile uint8_t is_sd_write_success = 0;
+//volatile uint8_t is_sd_write_success = 0;
+volatile uint32_t led_pattern = 0;
 
 
 void set_led_status(uint8_t status)
@@ -75,6 +87,12 @@ void set_led_status(uint8_t status)
     Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 7);
   else
     Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);
+}
+
+void exec_led_pattern(void)
+{
+  set_led_status(led_pattern & 1);
+  led_pattern >>= 1;
 }
 
 void __attribute__ ((interrupt)) SysTick_Handler(void)
@@ -97,7 +115,10 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
     trackpoint_save_cnt = TRACKPOINT_SAVE_PERIOD_SECONDS*1000/SYS_TICK_PERIOD_IN_MS;
   }
   
+  exec_led_pattern();
+  
   /* flash with LED for a successful write */
+  /*
   if ( is_sd_write_success > 0 )
   {
     set_led_status(1);
@@ -106,7 +127,7 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
   else
   {
     set_led_status(0);
-  }
+  }*/
     
   
   if ( (sys_tick_irq_cnt & 0x0ff) == 0 )
@@ -192,8 +213,7 @@ int __attribute__ ((noinline)) main(void)
   /* turn on GPIO */
   Chip_GPIO_Init(LPC_GPIO);
   
-  /* turn on IOCON... this is also done in Chip_SystemInit() */
-  
+  /* turn on IOCON, UART0 and GPIO */
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON | SYSCTL_CLOCK_UART0 | SYSCTL_CLOCK_GPIO);
   
   
@@ -226,7 +246,12 @@ int __attribute__ ((noinline)) main(void)
   
 
   display_Write("Mount:\n");
-  display_Write(gpx_get_sd_card_label());
+  {
+    uint8_t is_error;
+    display_Write(gpx_get_sd_card_label(&is_error));
+    if ( is_error != 0 )
+      led_pattern = BLINK_SD_ERROR;
+  }
   display_Write("\n");
 
 
@@ -242,6 +267,7 @@ int __attribute__ ((noinline)) main(void)
 	if ( gpx_write(&(pq.interface.pos)) == 0 )
 	{
 	  display_Write("SD write failed\n");
+	  led_pattern = BLINK_SD_ERROR;
 	}
 	else
 	{
@@ -249,11 +275,13 @@ int __attribute__ ((noinline)) main(void)
 	}
 	pq.interface.pos.is_altitude_update = 0;
 	pq.interface.pos.is_pos_and_time_update = 0;
-	is_sd_write_success = 1;
+	//is_sd_write_success = 1;
+	led_pattern = BLINK_SD_WRITE_OK;
       }
       else
       {
 	display_Write("GPS not avail.\n");	
+	led_pattern = BLINK_NO_GPS;
       }
     }
     
@@ -270,6 +298,13 @@ int __attribute__ ((noinline)) main(void)
       display_Write("UART: ");
       display_WriteUnsigned(uart_data_cnt);
       display_Write("\n");
+      if ( uart_data_cnt < 17 )
+      {
+	led_pattern = BLINK_NO_UART_DATA;
+	
+      }
+
+      
     }
     
     if ( is_output_last_unknown_msg )
@@ -374,6 +409,7 @@ int __attribute__ ((noinline)) main(void)
 
     //SCB->SCR |= (1UL << SCB_SCR_SLEEPONEXIT_Pos);		/* enter sleep mode after interrupt: this is NOT set, because SD writing is done in main loop */ 
     Chip_PMU_SleepState(LPC_PMU);						/* enter sleep mode now */
+    /* execution is continued here after next ISR has been executed */
   }
   
 }
