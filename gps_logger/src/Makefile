@@ -119,7 +119,7 @@ upload: $(DISNAME) $(HEXNAME) $(ELFNAME) $(BINNAME)
 
 .PHONY: clean
 clean:
-	$(RM) $(OBJ) $(HEXNAME) $(ELFNAME) $(LIBNAME) $(DISNAME) $(MAPNAME) $(BINNAME)
+	$(RM) $(OBJ) $(HEXNAME) $(ELFNAME) $(LIBNAME) $(DISNAME) $(MAPNAME) $(BINNAME) libssp.a libssp_nonshared.a
 
 # implicit rules
 .elf.hex:
