@@ -10,7 +10,6 @@
 
 #include <chip.h>
 #include "delay.h"
-#include "u8g2.h"
 #include "eeprom.h"
 #include "display.h"
 #include "gpx.h"

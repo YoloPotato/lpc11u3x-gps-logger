@@ -57,7 +57,6 @@ init, get last time, store new time
 #include <string.h>
 #include <chip.h>
 #include "delay.h"
-#include "u8g2.h"
 #include "ff.h"		/* Declarations of FatFs API */
 #include "gpx.h"
 #include "eeprom.h"

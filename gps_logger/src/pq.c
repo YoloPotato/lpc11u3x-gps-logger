@@ -7,7 +7,6 @@
 */
 #include <stddef.h>
 #include <string.h>
-#include "datecalc.h"
 #include "pq.h"
 
 
@@ -308,14 +307,15 @@ uint8_t pq_ParseGPRMC(pq_t *pq)
 #endif
   }
   
-  pq->interface.pos.time = 
+  pq->interface.pos.time = 0;
+  /*
     to_sec_since_2000(pq->interface.year, 
     pq->interface.month, 
     pq->interface.day,
     pq->interface.hour, 
     pq->interface.minute, 
     pq->interface.second);
-  
+  */
   return 1;
 }
 
