@@ -34,7 +34,7 @@ GCCBINPATH:=/usr/bin/
 # Project Information
 
 # The name for the project
-TARGETNAME:=gps_test
+TARGETNAME:=gps_logger
 
 # The source files of the project
 SRC:=$(wildcard *.c)
@@ -66,7 +66,7 @@ LDSCRIPT:=lpc11u35.ld
 LIBNAME:=$(TARGETNAME).a
 ELFNAME:=$(TARGETNAME).elf
 HEXNAME:=$(TARGETNAME).hex
-BINNAME:=$(TARGETNAME).bin
+BINNAME:=firmware.bin
 DISNAME:=$(TARGETNAME).dis
 MAPNAME:=$(TARGETNAME).map
 OBJ:=$(SRC:.c=.o) $(SYSSRC:.c=.o) $(U8G2SRC:.c=.o) $(FFSRC:.c=.o)
@@ -127,15 +127,21 @@ clean:
 
 # create the binary version of the new flashfile
 # extend the file with 0xff to the size of the flash ROM area
-.elf.bin:
-	$(OBJCOPY) -O binary --gap-fill 255 --pad-to 65536 $< $@
+#.elf.bin:
+#	$(OBJCOPY) -O binary --gap-fill 255 --pad-to 65536 $< $@
+
+
 
 # explicit rules
+
 $(ELFNAME): $(LIBNAME)($(OBJ)) libssp.a libssp_nonshared.a
 	$(LINK.o) $(LFLAGS) $(LIBNAME) $(LDLIBS) -o $@
 
 $(DISNAME): $(ELFNAME)
 	$(OBJDUMP) -D -S $< > $@
+
+$(BINNAME): $(ELFNAME)
+	$(OBJCOPY) -O binary --gap-fill 255 --pad-to 65536 $< $@
 
 # create empty ssp libs for -fstack-protector-all -fstack-protector
 libssp.a:
