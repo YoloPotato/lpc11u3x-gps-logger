@@ -44,6 +44,8 @@ MCPU:=cortex-m0
 
 # Include directory for the system include files
 SYSINC:=../lpc_chip_11uxx_lib/inc
+SYSINCUSB:=../lpc_chip_11uxx_lib/inc/usbd
+
 SYSSRC:=$(wildcard ../lpc_chip_11uxx_lib/src/*.c)
 
 # Directory for the linker script
@@ -72,7 +74,7 @@ SIZE:=$(GCCBINPATH)arm-none-eabi-size
 
 # Common flags
 COMMON_FLAGS = -mthumb -mcpu=$(MCPU)
-COMMON_FLAGS += -Wall -I. -I$(SYSINC)
+COMMON_FLAGS += -Wall -I. -I$(SYSINC) -I$(SYSINCUSB)
 # define stack size (defaults to 0x0100)  
 # COMMON_FLAGS += -D__STACK_SIZE=0x0100
 # define constant for lpcopen library

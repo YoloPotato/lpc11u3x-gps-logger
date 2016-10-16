@@ -6,6 +6,8 @@
   lpcopen_v2_03_lpcxpresso_nxp_lpcxpresso_11u37h.zip
 */
 #include <chip.h>
+#include <usbd_rom_api.h>
+#include <string.h>
 #include "delay.h"
 
 #define SYS_TICK_PERIOD_IN_MS 100
@@ -21,6 +23,22 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
 {
   sys_tick_irq_cnt++;
 }
+
+USBD_HANDLE_T g_hUsb;
+const USBD_API_T *g_pUsbApi;
+USBD_API_INIT_PARAM_T usb_param;
+
+void usb_init(void)
+{
+    // Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON); /* alread enabled */
+    Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  3,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_3 used for USB_VBUS */
+    Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  6,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_6 used for USB_CONNECT */
+    g_pUsbApi = (const USBD_API_T *) LPC_ROM_API->usbdApiBase;
+  
+    memset((void *) &usb_param, 0, sizeof(USBD_API_INIT_PARAM_T));
+    usb_param.usb_reg_base = LPC_USB0_BASE;
+}
+
 
 /*
   setup the hardware and start interrupts.
@@ -49,6 +67,8 @@ int __attribute__ ((noinline)) main(void)
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
   
   Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
+  
+  usb_init();
 
   for(;;)
   {
