@@ -31,7 +31,8 @@ int __attribute__ ((noinline)) main(void)
 
   /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
   /* it will also enable IOCON, see sysinit_11xx.c */
-  Chip_SystemInit(); 
+  //Chip_SystemInit(); 
+  Chip_SetupXtalClocking();
 
   /* if the clock or PLL has been changed, also update the global variable SystemCoreClock */
   /* see chip_11xx.c */
@@ -44,7 +45,7 @@ int __attribute__ ((noinline)) main(void)
   /* turn on GPIO */
   Chip_GPIO_Init(LPC_GPIO);
   
-  /* turn on IOCON... this is also done in Chip_SystemInit() */
+  /* turn on IOCON... this is also done in Chip_SystemInit(), but not in Chip_SetupXtalClocking() */
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
   
   Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
