@@ -25,18 +25,104 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
 }
 
 USBD_HANDLE_T g_hUsb;
-const USBD_API_T *g_pUsbApi;
+const USBD_API_T *g_pUsbApi;	// according to usbd_rom_api.h, the variable name has to be g_pUsbApi, which is defines as USBD_API
 USBD_API_INIT_PARAM_T usb_param;
+USB_CORE_DESCS_T usb_desc;
+
+/* Handle interrupt from USB */
+void __attribute__ ((interrupt)) USB_Handler(void)
+{
+
+	uint32_t *addr = (uint32_t *) LPC_USB->EPLISTSTART;
+	/*	WORKAROUND for artf32289 ROM driver BUG:
+	    As part of USB specification the device should respond
+	    with STALL condition for any unsupported setup packet. The host will send
+	    new setup packet/request on seeing STALL condition for EP0 instead of sending
+	    a clear STALL request. Current driver in ROM doesn't clear the STALL
+	    condition on new setup packet which should be fixed.
+	 */
+	if ( LPC_USB->DEVCMDSTAT & _BIT(8) ) {	/* if setup packet is received */
+		addr[0] &= ~(_BIT(29));	/* clear EP0_OUT stall */
+		addr[2] &= ~(_BIT(29));	/* clear EP0_IN stall */
+	}
+	USBD_API->hw->ISR(g_hUsb);
+}
+
+/*
+  this is how the LPC11U35 reports itself, when booted in flash mode:
+    New USB device found, idVendor=1fc9, idProduct=000f
+    New USB device strings: Mfr=1, Product=2, SerialNumber=3
+    Product: LPC1XXX IFLASH
+    Manufacturer: NXP
+    SerialNumber: ISP
+*/
+USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
+	USB_DEVICE_DESC_SIZE,				/* bLength */
+	USB_DEVICE_DESCRIPTOR_TYPE,			/* bDescriptorType */
+	0x0200,						/* bcdUSB: 2.00 */
+	0xEF,								/* bDeviceClass */
+	0x02,								/* bDeviceSubClass */
+	0x01,								/* bDeviceProtocol */
+	USB_MAX_PACKET0,					/* bMaxPacketSize0 */
+	0x1FC9,						/* idVendor */
+	0x000f,						/* idProduct, use the same as tie boot loader, does this make sens??? */
+	0x0100,						/* bcdDevice: 1.00 */
+	0x01,								/* iManufacturer */
+	0x02,								/* iProduct */
+	0x03,								/* iSerialNumber */
+	0x01								/* bNumConfigurations: This defines the number of ConfigDescriptors */
+};
+
+#ifdef xyz
+USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
+	USB_DEVICE_DESC_SIZE,			/* bLength */
+	USB_DEVICE_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	0x0201,	/* 2.00 */          /* bcdUSB */
+	0x00,							/* bDeviceClass */
+	0x00,							/* bDeviceSubClass */
+	0x00,							/* bDeviceProtocol */
+	USB_MAX_PACKET0,				/* bMaxPacketSize0 */
+	0x1FC9,					/* idVendor */
+	0x5002,					/* idProduct */
+	0x0100,	        /* 1.00 */          /* bcdDevice */
+	0x01,							/* iManufacturer */
+	0x02,							/* iProduct */
+	0x03,							/* iSerialNumber */
+	0x01							/* bNumConfigurations */
+};
+#endif
 
 void usb_init(void)
 {
-    // Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON); /* alread enabled */
-    Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  3,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_3 used for USB_VBUS */
-    Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  6,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_6 used for USB_CONNECT */
-    g_pUsbApi = (const USBD_API_T *) LPC_ROM_API->usbdApiBase;
+  ErrorCode_t ret = LPC_OK;
   
-    memset((void *) &usb_param, 0, sizeof(USBD_API_INIT_PARAM_T));
-    usb_param.usb_reg_base = LPC_USB0_BASE;
+  /* enable USB main clock */
+  Chip_Clock_SetUSBClockSource(SYSCTL_USBCLKSRC_PLLOUT, 1);
+  /* Enable AHB clock to the USB block and USB RAM. */
+  Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_USB);
+  Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_USBRAM);
+  /* power UP USB Phy */
+  Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_USBPAD_PD);
+
+  // Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON); /* alread enabled */
+  Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  3,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_3 used for USB_VBUS */
+  Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  6,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_6 used for USB_CONNECT */
+
+  g_pUsbApi = (const USBD_API_T *) LPC_ROM_API->usbdApiBase;
+
+  memset((void *) &usb_param, 0, sizeof(USBD_API_INIT_PARAM_T));
+  usb_param.usb_reg_base = LPC_USB0_BASE;  
+  usb_param.max_num_ep = 4;
+  usb_param.mem_base = USB_STACK_MEM_BASE;
+  usb_param.mem_size = USB_STACK_MEM_SIZE;  
+
+  usb_desc.device_desc = (uint8_t*)&USB_DeviceDescriptor;
+  //usb_desc.string_desc = (uint8_t *) USB_StringDescriptor;
+  //usb_desc.high_speed_desc = USB_FsConfigDescriptor;
+  //usb_desc.full_speed_desc = USB_FsConfigDescriptor;
+  //usb_desc.device_qualifier = 0;
+  
+  //ret = USBD_API->hw->Init(&g_hUsb, &usb_desc, &usb_param);
 }
 
 
@@ -221,7 +307,7 @@ isr_handler_t __isr_vector[48] __attribute__ ((section(".isr_vector"))) __attrib
   0,                                /* TIMER_32_1_IRQn               = 19,		 32-bit Timer1 Interrupt                          */
   0,                                /* SSP0_IRQn                     = 20,		 SSP0 Interrupt                                   */
   0,                                /* UART0_IRQn                    = 21,		 UART Interrupt                                   */
-  0,                                /* USB0_IRQn                     = 22,		 USB IRQ interrupt                                */
+  USB_Handler,              /* USB0_IRQn                     = 22,		 USB IRQ interrupt                                */
   0,                                /* USB0_FIQ_IRQn                 = 23,		 USB FIQ interrupt                                */
   0,                                /* ADC_IRQn                      = 24,		 A/D Converter Interrupt                          */
   0,                                /* WDT_IRQn                      = 25,		 Watchdog timer Interrupt                         */
