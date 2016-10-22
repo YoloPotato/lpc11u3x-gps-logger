@@ -32,7 +32,7 @@ USB_CORE_DESCS_T usb_desc;
 /* Handle interrupt from USB */
 void __attribute__ ((interrupt)) USB_Handler(void)
 {
-
+	
 	uint32_t *addr = (uint32_t *) LPC_USB->EPLISTSTART;
 	/*	WORKAROUND for artf32289 ROM driver BUG:
 	    As part of USB specification the device should respond
@@ -41,10 +41,10 @@ void __attribute__ ((interrupt)) USB_Handler(void)
 	    a clear STALL request. Current driver in ROM doesn't clear the STALL
 	    condition on new setup packet which should be fixed.
 	 */
-	if ( LPC_USB->DEVCMDSTAT & _BIT(8) ) {	/* if setup packet is received */
-		addr[0] &= ~(_BIT(29));	/* clear EP0_OUT stall */
-		addr[2] &= ~(_BIT(29));	/* clear EP0_IN stall */
-	}
+	//if ( LPC_USB->DEVCMDSTAT & _BIT(8) ) {	/* if setup packet is received */
+	//	addr[0] &= ~(_BIT(29));	/* clear EP0_OUT stall */
+	//	addr[2] &= ~(_BIT(29));	/* clear EP0_IN stall */
+	//}
 	USBD_API->hw->ISR(g_hUsb);
 }
 
@@ -56,13 +56,13 @@ void __attribute__ ((interrupt)) USB_Handler(void)
     Manufacturer: NXP
     SerialNumber: ISP
 */
-USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
+ALIGNED(4) USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
 	USB_DEVICE_DESC_SIZE,				/* bLength */
 	USB_DEVICE_DESCRIPTOR_TYPE,			/* bDescriptorType */
 	0x0200,						/* bcdUSB: 2.00 */
-	0xEF,								/* bDeviceClass */
-	0x02,								/* bDeviceSubClass */
-	0x01,								/* bDeviceProtocol */
+	0x00,							/* bDeviceClass */
+	0x00,							/* bDeviceSubClass */
+	0x00,							/* bDeviceProtocol */
 	USB_MAX_PACKET0,					/* bMaxPacketSize0 */
 	0x1FC9,						/* idVendor */
 	0x000f,						/* idProduct, use the same as tie boot loader, does this make sens??? */
@@ -74,6 +74,9 @@ USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
 };
 
 #ifdef xyz
+	0xEF,								/* bDeviceClass */
+	0x02,								/* bDeviceSubClass */
+	0x01,								/* bDeviceProtocol */
 USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
 	USB_DEVICE_DESC_SIZE,			/* bLength */
 	USB_DEVICE_DESCRIPTOR_TYPE,		/* bDescriptorType */
@@ -90,7 +93,129 @@ USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
 	0x03,							/* iSerialNumber */
 	0x01							/* bNumConfigurations */
 };
+
+/* a very simple configuration without interfaces */
+USB_CONFIGURATION_DESCRIPTOR USB_FsConfigDescriptor = {
+	USB_CONFIGURATION_DESC_SIZE,	/* bLength */
+	USB_CONFIGURATION_DESCRIPTOR_TYPE,	/* bDescriptorType */
+	USB_CONFIGURATION_DESC_SIZE,		/* wTotalLength */
+	0x00,							/* bNumInterfaces */
+	0x01,							/* bConfigurationValue */
+	0x05,							/* iConfiguration */
+	USB_CONFIG_BUS_POWERED,			/* bmAttributes */
+	USB_CONFIG_POWER_MA(100),		/* bMaxPower */
+};
+
 #endif
+
+
+ALIGNED(4)  const uint8_t USB_FsConfigDescriptor[] = {
+	/* Configuration 1 */
+		USB_CONFIGURATION_DESC_SIZE,	/* bLength */
+	USB_CONFIGURATION_DESCRIPTOR_TYPE,	/* bDescriptorType */
+	WBVAL(							/* wTotalLength */
+		1 * USB_CONFIGURATION_DESC_SIZE +
+		1 * USB_INTERFACE_DESC_SIZE     +
+		1 * DFU_FUNC_DESC_SIZE					
+		),
+	0x01,							/* bNumInterfaces */
+	0x01,							/* bConfigurationValue */
+	0x05,							/* iConfiguration */
+	USB_CONFIG_BUS_POWERED,			/* bmAttributes */
+	USB_CONFIG_POWER_MA(100),		/* bMaxPower */
+	/* Interface 0, Alternate Setting 0, DFU Class */
+	USB_INTERFACE_DESC_SIZE,		/* bLength */
+	USB_INTERFACE_DESCRIPTOR_TYPE,	/* bDescriptorType */
+	0x00,							/* bInterfaceNumber */
+	0x00,							/* bAlternateSetting */
+	0x01,							/* bNumEndpoints */
+	USB_DEVICE_CLASS_APP,			/* bInterfaceClass */
+	USB_DFU_SUBCLASS,				/* bInterfaceSubClass */
+	0x01,								/* bInterfaceProtocol */
+	0x04,							/* iInterface */
+	/* DFU RunTime/DFU Mode Functional Descriptor */
+	DFU_FUNC_DESC_SIZE,				/* bLength */
+	USB_DFU_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_MANIFEST_TOL | USB_DFU_WILL_DETACH,	/* bmAttributes */
+	WBVAL(0xFF00),					/* wDetachTimeout */
+	WBVAL(USB_DFU_XFER_SIZE),		/* wTransferSize */
+	WBVAL(0x100),					/* bcdDFUVersion */
+	
+	/* Terminator */
+	0								/* bLength */
+};
+
+  
+
+/* USB String Descriptor (optional) */
+const uint8_t USB_StringDescriptor[] = {
+	/* Index 0x00: LANGID Codes */
+	0x04,							/* bLength */
+	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	WBVAL(0x0409),	/* US English */    /* wLANGID */
+	/* Index 0x01: Manufacturer */
+	(18 * 2 + 2),					/* bLength (13 Char + Type + lenght) */
+	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	'N', 0,
+	'X', 0,
+	'P', 0,
+	' ', 0,
+	'S', 0,
+	'e', 0,
+	'm', 0,
+	'i', 0,
+	'c', 0,
+	'o', 0,
+	'n', 0,
+	'd', 0,
+	'u', 0,
+	'c', 0,
+	't', 0,
+	'o', 0,
+	'r', 0,
+	's', 0,
+	/* Index 0x02: Product */
+	(3 * 2 + 2),					/* bLength (3 Char + Type + lenght) */
+	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	'L', 0,
+	'P', 0,
+	'C', 0,
+	/* Index 0x03: Serial Number */
+	(13 * 2 + 2),					/* bLength (13 Char + Type + lenght) */
+	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	'A', 0,
+	'B', 0,
+	'C', 0,
+	'D', 0,
+	'1', 0,
+	'2', 0,
+	'3', 0,
+	'4', 0,
+	'5', 0,
+	'6', 0,
+	'7', 0,
+	'8', 0,
+	'9', 0,
+	/* Index 0x04: Interface 0, Alternate Setting 0 */
+	(3 * 2 + 2),					/* bLength (3 Char + Type + lenght) */
+	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	'G', 0,
+	'P', 0,
+	'S', 0,
+	/* Index 0x05: Interface 1, Alternate Setting 0 */
+	(8 * 2 + 2),					/* bLength (9 Char + Type + lenght) */
+	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	'L', 0,
+	'P', 0,
+	'C', 0,
+	'1', 0,
+	'1', 0,
+	'U', 0,
+	'3', 0,
+	'5', 0,
+};
+
+
 
 void usb_init(void)
 {
@@ -117,12 +242,31 @@ void usb_init(void)
   usb_param.mem_size = USB_STACK_MEM_SIZE;  
 
   usb_desc.device_desc = (uint8_t*)&USB_DeviceDescriptor;
-  //usb_desc.string_desc = (uint8_t *) USB_StringDescriptor;
-  //usb_desc.high_speed_desc = USB_FsConfigDescriptor;
-  //usb_desc.full_speed_desc = USB_FsConfigDescriptor;
-  //usb_desc.device_qualifier = 0;
+  usb_desc.string_desc = (uint8_t *) USB_StringDescriptor;
+  usb_desc.high_speed_desc = (uint8_t *)USB_FsConfigDescriptor;
+  usb_desc.full_speed_desc = (uint8_t *)USB_FsConfigDescriptor;
+  usb_desc.device_qualifier = 0;
   
-  //ret = USBD_API->hw->Init(&g_hUsb, &usb_desc, &usb_param);
+  ret = USBD_API->hw->Init(&g_hUsb, &usb_desc, &usb_param);
+
+  if (ret == LPC_OK) 
+  {
+    /* Link Power Management is supported. */
+    //LPC_USB->DEVCMDSTAT |= (0x1<<11);
+    //LPC_USB->LPM |= (0x2<<4);/* RESUME duration. */
+
+    /*	WORKAROUND for artf32219 ROM driver BUG:
+	The mem_base parameter part of USB_param structure returned
+	by Init() routine is not accurate causing memory allocation issues for
+	further components.
+     */
+    usb_param.mem_base = USB_STACK_MEM_BASE + (USB_STACK_MEM_SIZE - usb_param.mem_size);
+    
+    /* enable USB interrupts */
+    NVIC_EnableIRQ(USB0_IRQn);
+    /* connect */
+    USBD_API->hw->Connect(g_hUsb, 1);
+  }
 }
 
 
