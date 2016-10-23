@@ -71,6 +71,12 @@ const uint32_t gps_set_rate_tick_delay = 20;
 /* No UART data: long, 2x short,  long, 2x short, long */
 #define BLINK_NO_UART_DATA 0x75757
 
+/* duty cycle in n/16 %, 0 <= n <= 16: n=0 means always off */
+/* usefull values are 3 or 4 */
+/* if sysclk is 100ms, then with a value of 4, the load will be activated for */
+/* 400ms and turned off for 1200ms  (1600ms cycle) */
+#define BATTERY_LOAD_DUTY_CYCLE 4
+
 
 /*=======================================================================*/
 
@@ -126,6 +132,18 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
   }
   
   sys_tick_irq_cnt++;
+  
+  /* force additional load for external usb battery pack */
+  /* put gate of mosfet to PIO0_11 */
+  if ( (sys_tick_irq_cnt & 15) < BATTERY_LOAD_DUTY_CYCLE )
+  {
+    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 0, 11);	/* enable load */
+  }
+  else
+  {
+    Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 11);		/* disable load */
+  }
+
 
   /* time is over, let us save the trackpoint */
   if ( trackpoint_save_cnt > 0 )
@@ -229,6 +247,11 @@ int __attribute__ ((noinline)) main(void)
   /* if the clock or PLL has been changed, also update the global variable SystemCoreClock */
   /* see chip_11xx.c */
   SystemCoreClockUpdate();
+
+  /* configure mosfet gate (additional load for battery pack) */
+  Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 11, IOCON_FUNC1);	/* Enable PIO0_11 */
+  Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 11);	/* port 0, pin 11: Battery Pack Load */
+  Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 11);
   
   /* set systick and start systick interrupt */
   SysTick_Config(SystemCoreClock/1000UL*(unsigned long)SYS_TICK_PERIOD_IN_MS);
@@ -240,7 +263,8 @@ int __attribute__ ((noinline)) main(void)
   /* not required SYSCTL_CLOCK_IOCON is enabled with Chip_SystemInit, SYSCTL_CLOCK_UART0 */
   /* is enabled later and SYSCTL_CLOCK_GPIO is already anabled with Chip_GPIO_Init() */
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON | SYSCTL_CLOCK_UART0 | SYSCTL_CLOCK_GPIO);
-  
+
+
   
   /* this is the earliest time we can access the display (if any...) */
   display_Init();

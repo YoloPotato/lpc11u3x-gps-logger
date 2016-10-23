@@ -24,10 +24,91 @@ void __attribute__ ((interrupt)) SysTick_Handler(void)
   sys_tick_irq_cnt++;
 }
 
+/* Setup system clocking */
+static void SystemSetupClocking(void)
+{
+	volatile int i;
+
+	/* Powerup main oscillator */
+	Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_SYSOSC_PD);
+
+	/* Wait 200us for OSC to be stabilized, no status
+	   indication, dummy wait. */
+	for (i = 0; i < 0x100; i++) {}
+	Chip_Clock_SetMainClockSource(SYSCTL_MAINCLKSRC_IRC);
+	/* Set system PLL input to main oscillator */
+	Chip_Clock_SetSystemPLLSource(SYSCTL_PLLCLKSRC_MAINOSC);
+
+	/* Power down PLL to change the PLL divider ratio */
+	Chip_SYSCTL_PowerDown(SYSCTL_POWERDOWN_SYSPLL_PD);
+
+	/* Setup PLL for main oscillator rate (FCLKIN = 12MHz) * 4 = 48MHz
+	   MSEL = 3 (this is pre-decremented), PSEL = 1 (for P = 2)
+	   FCLKOUT = FCLKIN * (MSEL + 1) = 12MHz * 4 = 48MHz
+	   FCCO = FCLKOUT * 2 * P = 48MHz * 2 * 2 = 192MHz (within FCCO range) */
+	Chip_Clock_SetupSystemPLL(3, 1);
+
+	/* Powerup system PLL */
+	Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_SYSPLL_PD);
+
+	/* Wait for PLL to lock */
+	while (!Chip_Clock_IsSystemPLLLocked()) {}
+
+	/* Set system clock divider to 1 */
+	Chip_Clock_SetSysClockDiv(1);
+
+	/* Setup FLASH access to 3 clocks */
+	Chip_FMC_SetFLASHAccess(FLASHTIM_50MHZ_CPU);
+
+	/* Set main clock source to the system PLL. This will drive 48MHz
+	   for the main clock and 48MHz for the system clock */
+	Chip_Clock_SetMainClockSource(SYSCTL_MAINCLKSRC_PLLOUT);
+
+	/* Set USB PLL input to main oscillator */
+	Chip_Clock_SetUSBPLLSource(SYSCTL_PLLCLKSRC_MAINOSC);
+	/* Setup USB PLL  (FCLKIN = 12MHz) * 4 = 48MHz
+	   MSEL = 3 (this is pre-decremented), PSEL = 1 (for P = 2)
+	   FCLKOUT = FCLKIN * (MSEL + 1) = 12MHz * 4 = 48MHz
+	   FCCO = FCLKOUT * 2 * P = 48MHz * 2 * 2 = 192MHz (within FCCO range) */
+	Chip_Clock_SetupUSBPLL(3, 1);
+
+	/* Powerup USB PLL */
+	Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_USBPLL_PD);
+
+	/* Wait for PLL to lock */
+	while (!Chip_Clock_IsUSBPLLLocked()) {}
+}
+
+
 USBD_HANDLE_T g_hUsb;
 const USBD_API_T *g_pUsbApi;	// according to usbd_rom_api.h, the variable name has to be g_pUsbApi, which is defines as USBD_API
 USBD_API_INIT_PARAM_T usb_param;
-USB_CORE_DESCS_T usb_desc;
+USB_CORE_DESCS_T desc;
+
+
+static ErrorCode_t update_device_status_patch(USBD_HANDLE_T hUsb)
+{
+	USB_CORE_CTRL_T *pCtrl;          
+	pCtrl = (USB_CORE_CTRL_T *) hUsb;      /* convert the handle to control structure */
+	if ( (((USB_CONFIGURATION_DESCRIPTOR *) (pCtrl->full_speed_desc))->bmAttributes & USB_CONFIG_POWERED_MASK) != 0 ) {
+		/* This is SELF_POWERED. */
+		pCtrl->device_status |= (0x01 << 0);
+	}
+	else {
+		/* This is BUS_POWERED. */
+		pCtrl->device_status &= ~(0x01 << 0);                     
+	}
+	if ( (((USB_CONFIGURATION_DESCRIPTOR *) (pCtrl->full_speed_desc))->bmAttributes & USB_CONFIG_REMOTE_WAKEUP) != 0 ) {
+		/* This is REMOTE_WAKEUP enabled. */
+		pCtrl->device_status |= (0x01 << 1);
+	}
+	else {
+		/* This is REMOTE_WAKEUP disabled. */
+		pCtrl->device_status &= ~(0x01 << 1);
+	}
+	return LPC_OK;
+}
+
 
 /* Handle interrupt from USB */
 void __attribute__ ((interrupt)) USB_Handler(void)
@@ -41,179 +122,75 @@ void __attribute__ ((interrupt)) USB_Handler(void)
 	    a clear STALL request. Current driver in ROM doesn't clear the STALL
 	    condition on new setup packet which should be fixed.
 	 */
-	//if ( LPC_USB->DEVCMDSTAT & _BIT(8) ) {	/* if setup packet is received */
-	//	addr[0] &= ~(_BIT(29));	/* clear EP0_OUT stall */
-	//	addr[2] &= ~(_BIT(29));	/* clear EP0_IN stall */
-	//}
+	if ( LPC_USB->DEVCMDSTAT & _BIT(8) ) {	/* if setup packet is received */
+		addr[0] &= ~(_BIT(29));	/* clear EP0_OUT stall */
+		addr[2] &= ~(_BIT(29));	/* clear EP0_IN stall */
+	}
 	USBD_API->hw->ISR(g_hUsb);
 }
 
-/*
-  this is how the LPC11U35 reports itself, when booted in flash mode:
-    New USB device found, idVendor=1fc9, idProduct=000f
-    New USB device strings: Mfr=1, Product=2, SerialNumber=3
-    Product: LPC1XXX IFLASH
-    Manufacturer: NXP
-    SerialNumber: ISP
-*/
-ALIGNED(4) USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
-	USB_DEVICE_DESC_SIZE,				/* bLength */
-	USB_DEVICE_DESCRIPTOR_TYPE,			/* bDescriptorType */
-	0x0200,						/* bcdUSB: 2.00 */
-	0x00,							/* bDeviceClass */
-	0x00,							/* bDeviceSubClass */
-	0x00,							/* bDeviceProtocol */
-	USB_MAX_PACKET0,					/* bMaxPacketSize0 */
-	0x1FC9,						/* idVendor */
-	0x000f,						/* idProduct, use the same as tie boot loader, does this make sens??? */
-	0x0100,						/* bcdDevice: 1.00 */
-	0x01,								/* iManufacturer */
-	0x02,								/* iProduct */
-	0x03,								/* iSerialNumber */
-	0x01								/* bNumConfigurations: This defines the number of ConfigDescriptors */
-};
+/* Handler for WCID USB device requests. */
+static ErrorCode_t WCID_hdlr(USBD_HANDLE_T hUsb, void *data, uint32_t event)
+{
+	USB_CORE_CTRL_T *pCtrl = (USB_CORE_CTRL_T *) hUsb;
+	ErrorCode_t ret = ERR_USBD_UNHANDLED;
 
-#ifdef xyz
-	0xEF,								/* bDeviceClass */
-	0x02,								/* bDeviceSubClass */
-	0x01,								/* bDeviceProtocol */
-USB_DEVICE_DESCRIPTOR USB_DeviceDescriptor = {
-	USB_DEVICE_DESC_SIZE,			/* bLength */
-	USB_DEVICE_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	0x0201,	/* 2.00 */          /* bcdUSB */
-	0x00,							/* bDeviceClass */
-	0x00,							/* bDeviceSubClass */
-	0x00,							/* bDeviceProtocol */
-	USB_MAX_PACKET0,				/* bMaxPacketSize0 */
-	0x1FC9,					/* idVendor */
-	0x5002,					/* idProduct */
-	0x0100,	        /* 1.00 */          /* bcdDevice */
-	0x01,							/* iManufacturer */
-	0x02,							/* iProduct */
-	0x03,							/* iSerialNumber */
-	0x01							/* bNumConfigurations */
-};
+	/* Handle Microsoft's WCID request for install less WinUSB operation.
+	   Check https://github.com/pbatard/libwdi/wiki/WCID-Devices for more details.
+	 */
+	if (event == USB_EVT_SETUP) {
+		switch (pCtrl->SetupPacket.bmRequestType.BM.Type) {
+		case REQUEST_STANDARD:
+			if ((pCtrl->SetupPacket.bmRequestType.BM.Recipient == REQUEST_TO_DEVICE) &&
+				(pCtrl->SetupPacket.bRequest == USB_REQUEST_GET_DESCRIPTOR) &&
+				(pCtrl->SetupPacket.wValue.WB.H == USB_BOS_TYPE)) {
+				pCtrl->EP0Data.pData = (uint8_t *) USB_BOSDescriptor;
+				pCtrl->EP0Data.Count = MIN(USB_BOSDescriptorSize, pCtrl->SetupPacket.wLength);
+				USBD_API->core->DataInStage(pCtrl);
+				ret = LPC_OK;
+			}
+            else if ((pCtrl->SetupPacket.bmRequestType.BM.Recipient == REQUEST_TO_DEVICE) &&
+                     (pCtrl->SetupPacket.bRequest == USB_REQUEST_GET_DESCRIPTOR) &&
+                     (pCtrl->SetupPacket.wValue.WB.H == USB_STRING_DESCRIPTOR_TYPE) &&
+                     (pCtrl->SetupPacket.wValue.WB.L == 0x00EE)) {
+                pCtrl->EP0Data.pData = (uint8_t *) WCID_String_Descriptor;
+                pCtrl->EP0Data.Count = MIN(WCID_String_DescriptorSize, pCtrl->SetupPacket.wLength);
+                USBD_API->core->DataInStage(pCtrl);
+                ret = LPC_OK;
+            }
+			break;
+        case REQUEST_VENDOR:
+            if (pCtrl->SetupPacket.bRequest != WCID_VENDOR_CODE) {
+                break;
+            }
+            switch (pCtrl->SetupPacket.bmRequestType.BM.Recipient) {
+                case REQUEST_TO_DEVICE:
+                    if (pCtrl->SetupPacket.wIndex.W == 0x0004) {
+                        pCtrl->EP0Data.pData = (uint8_t *) WCID_CompatID_Descriptor;
+                        pCtrl->EP0Data.Count = MIN(WCID_CompatID_DescriptorSize, pCtrl->SetupPacket.wLength);
+                        USBD_API->core->DataInStage(pCtrl);
+                        ret = LPC_OK;
+                    }
+                    /* Fall-through. Check note1 of
+                       https://github.com/pbatard/libwdi/wiki/WCID-Devices#wiki-Defining_a_Device_Interface_GUID_or_other_device_specific_properties
+                       break;
+                    */
 
-/* a very simple configuration without interfaces */
-USB_CONFIGURATION_DESCRIPTOR USB_FsConfigDescriptor = {
-	USB_CONFIGURATION_DESC_SIZE,	/* bLength */
-	USB_CONFIGURATION_DESCRIPTOR_TYPE,	/* bDescriptorType */
-	USB_CONFIGURATION_DESC_SIZE,		/* wTotalLength */
-	0x00,							/* bNumInterfaces */
-	0x01,							/* bConfigurationValue */
-	0x05,							/* iConfiguration */
-	USB_CONFIG_BUS_POWERED,			/* bmAttributes */
-	USB_CONFIG_POWER_MA(100),		/* bMaxPower */
-};
+                case REQUEST_TO_INTERFACE:
+                    if (pCtrl->SetupPacket.wIndex.W == 0x0005) {
+                        pCtrl->EP0Data.pData = (uint8_t *) WCID_ExtProp_Descriptor;
+                        pCtrl->EP0Data.Count = MIN(WCID_ExtProp_DescriptorSize, pCtrl->SetupPacket.wLength);
+                        USBD_API->core->DataInStage(pCtrl);
+                        ret = LPC_OK;
+                    }
+                    break;
+            }
+            break;
+        }
+	}
 
-#endif
-
-
-ALIGNED(4)  const uint8_t USB_FsConfigDescriptor[] = {
-	/* Configuration 1 */
-		USB_CONFIGURATION_DESC_SIZE,	/* bLength */
-	USB_CONFIGURATION_DESCRIPTOR_TYPE,	/* bDescriptorType */
-	WBVAL(							/* wTotalLength */
-		1 * USB_CONFIGURATION_DESC_SIZE +
-		1 * USB_INTERFACE_DESC_SIZE     +
-		1 * DFU_FUNC_DESC_SIZE					
-		),
-	0x01,							/* bNumInterfaces */
-	0x01,							/* bConfigurationValue */
-	0x05,							/* iConfiguration */
-	USB_CONFIG_BUS_POWERED,			/* bmAttributes */
-	USB_CONFIG_POWER_MA(100),		/* bMaxPower */
-	/* Interface 0, Alternate Setting 0, DFU Class */
-	USB_INTERFACE_DESC_SIZE,		/* bLength */
-	USB_INTERFACE_DESCRIPTOR_TYPE,	/* bDescriptorType */
-	0x00,							/* bInterfaceNumber */
-	0x00,							/* bAlternateSetting */
-	0x01,							/* bNumEndpoints */
-	USB_DEVICE_CLASS_APP,			/* bInterfaceClass */
-	USB_DFU_SUBCLASS,				/* bInterfaceSubClass */
-	0x01,								/* bInterfaceProtocol */
-	0x04,							/* iInterface */
-	/* DFU RunTime/DFU Mode Functional Descriptor */
-	DFU_FUNC_DESC_SIZE,				/* bLength */
-	USB_DFU_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_MANIFEST_TOL | USB_DFU_WILL_DETACH,	/* bmAttributes */
-	WBVAL(0xFF00),					/* wDetachTimeout */
-	WBVAL(USB_DFU_XFER_SIZE),		/* wTransferSize */
-	WBVAL(0x100),					/* bcdDFUVersion */
-	
-	/* Terminator */
-	0								/* bLength */
-};
-
-  
-
-/* USB String Descriptor (optional) */
-const uint8_t USB_StringDescriptor[] = {
-	/* Index 0x00: LANGID Codes */
-	0x04,							/* bLength */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	WBVAL(0x0409),	/* US English */    /* wLANGID */
-	/* Index 0x01: Manufacturer */
-	(18 * 2 + 2),					/* bLength (13 Char + Type + lenght) */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	'N', 0,
-	'X', 0,
-	'P', 0,
-	' ', 0,
-	'S', 0,
-	'e', 0,
-	'm', 0,
-	'i', 0,
-	'c', 0,
-	'o', 0,
-	'n', 0,
-	'd', 0,
-	'u', 0,
-	'c', 0,
-	't', 0,
-	'o', 0,
-	'r', 0,
-	's', 0,
-	/* Index 0x02: Product */
-	(3 * 2 + 2),					/* bLength (3 Char + Type + lenght) */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	'L', 0,
-	'P', 0,
-	'C', 0,
-	/* Index 0x03: Serial Number */
-	(13 * 2 + 2),					/* bLength (13 Char + Type + lenght) */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	'A', 0,
-	'B', 0,
-	'C', 0,
-	'D', 0,
-	'1', 0,
-	'2', 0,
-	'3', 0,
-	'4', 0,
-	'5', 0,
-	'6', 0,
-	'7', 0,
-	'8', 0,
-	'9', 0,
-	/* Index 0x04: Interface 0, Alternate Setting 0 */
-	(3 * 2 + 2),					/* bLength (3 Char + Type + lenght) */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	'G', 0,
-	'P', 0,
-	'S', 0,
-	/* Index 0x05: Interface 1, Alternate Setting 0 */
-	(8 * 2 + 2),					/* bLength (9 Char + Type + lenght) */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	'L', 0,
-	'P', 0,
-	'C', 0,
-	'1', 0,
-	'1', 0,
-	'U', 0,
-	'3', 0,
-	'5', 0,
-};
+	return ret;
+}
 
 
 
@@ -233,40 +210,83 @@ void usb_init(void)
   Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  3,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_3 used for USB_VBUS */
   Chip_IOCON_PinMuxSet(LPC_IOCON, 0,  6,  (IOCON_FUNC1 | IOCON_MODE_INACT));		/* PIO0_6 used for USB_CONNECT */
 
-  g_pUsbApi = (const USBD_API_T *) LPC_ROM_API->usbdApiBase;
+	/* Init USB API structure */
+	g_pUsbApi = (const USBD_API_T *) LPC_ROM_API->usbdApiBase;
 
-  memset((void *) &usb_param, 0, sizeof(USBD_API_INIT_PARAM_T));
-  usb_param.usb_reg_base = LPC_USB0_BASE;  
-  usb_param.max_num_ep = 4;
-  usb_param.mem_base = USB_STACK_MEM_BASE;
-  usb_param.mem_size = USB_STACK_MEM_SIZE;  
+	/* initialize call back structures */
+	memset((void *) &usb_param, 0, sizeof(USBD_API_INIT_PARAM_T));
+	usb_param.usb_reg_base = LPC_USB0_BASE;
+	/*	WORKAROUND for artf44835 ROM driver BUG:
+	    Code clearing STALL bits in endpoint reset routine corrupts memory area
+	    next to the endpoint control data. For example When EP0, EP1_IN, EP1_OUT,
+	    EP2_IN are used we need to specify 3 here. But as a workaround for this
+	    issue specify 4. So that extra EPs control structure acts as padding buffer
+	    to avoid data corruption. Corruption of padding memory doesn�t affect the
+	    stack/program behavior.
+	 */
+	usb_param.max_num_ep = 1 + 1;
+	usb_param.mem_base = USB_STACK_MEM_BASE;
+	usb_param.mem_size = USB_STACK_MEM_SIZE;
+	usb_param.USB_Reset_Event = update_device_status_patch;
+	// usb_param.USB_Configure_Event = USB_Configure_Event;
 
-  usb_desc.device_desc = (uint8_t*)&USB_DeviceDescriptor;
-  usb_desc.string_desc = (uint8_t *) USB_StringDescriptor;
-  usb_desc.high_speed_desc = (uint8_t *)USB_FsConfigDescriptor;
-  usb_desc.full_speed_desc = (uint8_t *)USB_FsConfigDescriptor;
-  usb_desc.device_qualifier = 0;
-  
-  ret = USBD_API->hw->Init(&g_hUsb, &usb_desc, &usb_param);
+	/* Set the USB descriptors */
+	desc.device_desc = (uint8_t *) &USB_DeviceDescriptor;
+	desc.string_desc = (uint8_t *) &USB_StringDescriptor[0];
+	/* Note, to pass USBCV test full-speed only devices should have both
+	 * descriptor arrays point to same location and device_qualifier set
+	 * to 0.
+	 */
+	desc.high_speed_desc = (uint8_t *) &USB_FsConfigDescriptor[0];
+	desc.full_speed_desc = (uint8_t *) &USB_FsConfigDescriptor[0];
+	desc.device_qualifier = 0;
 
-  if (ret == LPC_OK) 
-  {
-    /* Link Power Management is supported. */
-    //LPC_USB->DEVCMDSTAT |= (0x1<<11);
-    //LPC_USB->LPM |= (0x2<<4);/* RESUME duration. */
+	/* USB Initialization */
+	ret = USBD_API->hw->Init(&g_hUsb, &desc, &usb_param);
+	if (ret == LPC_OK) {
+		
+		/* Link Power Management is supported. */
+    LPC_USB->DEVCMDSTAT |= (0x1<<11);
+    LPC_USB->LPM |= (0x2<<4);/* RESUME duration. */
 
-    /*	WORKAROUND for artf32219 ROM driver BUG:
-	The mem_base parameter part of USB_param structure returned
-	by Init() routine is not accurate causing memory allocation issues for
-	further components.
-     */
-    usb_param.mem_base = USB_STACK_MEM_BASE + (USB_STACK_MEM_SIZE - usb_param.mem_size);
-    
-    /* enable USB interrupts */
-    NVIC_EnableIRQ(USB0_IRQn);
-    /* connect */
-    USBD_API->hw->Connect(g_hUsb, 1);
-  }
+		/*	WORKAROUND for artf32219 ROM driver BUG:
+		    The mem_base parameter part of USB_param structure returned
+		    by Init() routine is not accurate causing memory allocation issues for
+		    further components.
+		 */
+		usb_param.mem_base = USB_STACK_MEM_BASE + (USB_STACK_MEM_SIZE - usb_param.mem_size);
+		
+		/* register WCID handler */
+		ret = USBD_API->core->RegisterClassHandler(g_hUsb, WCID_hdlr, 0);
+		
+		ret = usb_dfu_init(g_hUsb,
+						   (USB_INTERFACE_DESCRIPTOR *) &USB_FsConfigDescriptor[sizeof(USB_CONFIGURATION_DESCRIPTOR)],
+						   &usb_param.mem_base, &usb_param.mem_size);
+		
+		if (ret == LPC_OK) {
+				/* enable USB interrupts */
+	NVIC_EnableIRQ(USB0_IRQn);
+			/* now connect */
+			USBD_API->hw->Connect(g_hUsb, 1);
+		}
+	}
+
+#ifdef XYZ
+	while (1) {
+				if (dfu_detach_sig)
+				{
+				  uint16_t i;
+					for (i = 0; i < 0x4000; i++) {
+						/* wait before detach */
+					}
+					enter_DFU_SL(g_hUsb);
+				}
+				else {
+					__WFI();
+				}
+			
+		}
+#endif
 }
 
 
@@ -280,7 +300,8 @@ int __attribute__ ((noinline)) main(void)
   /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
   /* it will also enable IOCON, see sysinit_11xx.c */
   //Chip_SystemInit(); 
-  Chip_SetupXtalClocking();
+  //Chip_SetupXtalClocking();
+  SystemSetupClocking();	// local copy
 
   /* if the clock or PLL has been changed, also update the global variable SystemCoreClock */
   /* see chip_11xx.c */
@@ -297,6 +318,8 @@ int __attribute__ ((noinline)) main(void)
   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
   
   Chip_GPIO_SetPinDIROutput(LPC_GPIO, 0, 7);	/* port 0, pin 7: LED on eHaJo Breakout Board */
+  Chip_GPIO_SetPinDIROutput(LPC_GPIO, 1, 19);	/* port 1, pin 19: Disable Battery Pack Load */
+  Chip_GPIO_SetPinOutLow(LPC_GPIO, 1, 19);
   
   usb_init();
 
@@ -308,6 +331,13 @@ int __attribute__ ((noinline)) main(void)
     
     Chip_GPIO_SetPinOutLow(LPC_GPIO, 0, 7);    
     delay_micro_seconds(500UL*1000UL);
+    
+    Chip_GPIO_SetPinDIROutput(LPC_GPIO, 1, 19);	/* port 1, pin 19: Short Circuit*/
+    
+    Chip_GPIO_SetPinOutHigh(LPC_GPIO, 1, 19);
+    delay_micro_seconds(400UL*1000UL);
+    Chip_GPIO_SetPinOutLow(LPC_GPIO, 1, 19);
+    
   }
   
   
