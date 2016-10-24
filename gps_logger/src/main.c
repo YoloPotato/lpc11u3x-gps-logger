@@ -75,6 +75,7 @@ const uint32_t gps_set_rate_tick_delay = 20;
 /* usefull values are 3 or 4 */
 /* if sysclk is 100ms, then with a value of 4, the load will be activated for */
 /* 400ms and turned off for 1200ms  (1600ms cycle) */
+/* PIO0_11 */
 #define BATTERY_LOAD_DUTY_CYCLE 4
 
 
