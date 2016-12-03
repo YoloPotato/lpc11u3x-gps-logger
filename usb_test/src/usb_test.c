@@ -300,8 +300,8 @@ int __attribute__ ((noinline)) main(void)
   /* call to the lpc lib setup procedure. This will set the IRC as clk src and main clk to 48 MHz */
   /* it will also enable IOCON, see sysinit_11xx.c */
   //Chip_SystemInit(); 
-  //Chip_SetupXtalClocking();
-  SystemSetupClocking();	// local copy
+  //Chip_SetupXtalClocking();	// this does NOT activate the USB Clock
+  SystemSetupClocking();	// local copy --> will also activate USB Clock
 
   /* if the clock or PLL has been changed, also update the global variable SystemCoreClock */
   /* see chip_11xx.c */
